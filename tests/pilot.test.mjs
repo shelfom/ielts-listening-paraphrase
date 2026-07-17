@@ -115,6 +115,14 @@ test("Back and Next sit below the listening cards", () => {
   assert.match(html, /class="text-button next-button"/);
 });
 
+test("Listen controls are docked on the right, immediately above Choose", () => {
+  const styles = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
+  assert.match(styles, /\.question-card \.card-actions\.single-action \{[\s\S]*right:/);
+  assert.match(styles, /\.option-card \.card-actions \{[\s\S]*grid-template-rows: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(styles, /\.option-card \.listen-action \{[\s\S]*grid-row: 1/);
+  assert.match(styles, /\.option-card \.choose-button \{[\s\S]*grid-row: 2/);
+});
+
 test("completion screen progresses Test by Test and preserves pep talks", () => {
   const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
   const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");

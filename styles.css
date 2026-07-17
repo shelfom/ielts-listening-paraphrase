@@ -362,6 +362,48 @@ h1 {
   grid-template-columns: 1fr;
 }
 
+.question-card .card-actions.single-action {
+  position: absolute;
+  z-index: 3;
+  top: clamp(11px, 1.7vw, 16px);
+  right: clamp(11px, 1.7vw, 16px);
+  width: auto;
+  padding: 0;
+  border: 0;
+}
+
+.question-card .listen-action {
+  min-width: 94px;
+  min-height: 34px;
+  padding-inline: 14px;
+  background: color-mix(in srgb, var(--surface) 92%, var(--canvas));
+}
+
+.option-card .card-actions {
+  min-height: 96px;
+  grid-template-columns: 1fr;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  align-content: stretch;
+  justify-items: end;
+  gap: 7px;
+  padding: 8px 10px;
+}
+
+.option-card .listen-action,
+.option-card .choose-button {
+  width: min(48%, 210px);
+}
+
+.option-card .listen-action {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.option-card .choose-button {
+  grid-column: 1;
+  grid-row: 2;
+}
+
 .listen-action,
 .choose-button {
   min-height: 42px;
@@ -756,6 +798,30 @@ h1 {
     gap: 6px;
   }
 
+  .question-card .card-actions.single-action {
+    top: 10px;
+    right: 10px;
+  }
+
+  .question-card .listen-action {
+    min-width: 64px;
+    min-height: 32px;
+    padding-inline: 6px;
+    font-size: 0.52rem;
+    letter-spacing: 0.055em;
+  }
+
+  .option-card .card-actions {
+    min-height: 84px;
+    padding: 6px 7px;
+    gap: 5px;
+  }
+
+  .option-card .listen-action,
+  .option-card .choose-button {
+    width: 48%;
+  }
+
   .listen-action,
   .choose-button {
     min-height: 38px;
@@ -841,6 +907,12 @@ h1 {
 
   .card-actions {
     padding: 6px;
+  }
+
+  .option-card .card-actions {
+    min-height: 78px;
+    padding: 5px 6px;
+    gap: 4px;
   }
 }
 
