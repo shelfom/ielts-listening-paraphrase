@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, statSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { COURSE, audioKey, correctPosition } from "../data.js";
 
 test("pilot contains Cambridge 11 Test 1 from required to purpose", () => {
@@ -59,4 +59,21 @@ test("correct and wrong game feedback sounds are bundled", () => {
     assert.ok(existsSync(file), `${name} sound is missing`);
     assert.ok(statSync(file).size > 1000, `${name} sound is empty`);
   }
+});
+
+test("Choose is available immediately and does not require listening first", () => {
+  const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
+  assert.equal((html.match(/class="choose-button"/g) || []).length, 3);
+  assert.doesNotMatch(html, /class="choose-button"[^>]*disabled/);
+  assert.match(app, /if \(state\.locked\) return;/);
+  assert.doesNotMatch(app, /!allClipsHeard\(\)/);
+});
+
+test("current and next drill audio are held in a persistent preload pool", () => {
+  const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
+  assert.match(app, /const audioPool = new Map\(\)/);
+  assert.match(app, /function primeClip\(src\)/);
+  assert.match(app, /preloadCurrentAndNext\(\)/);
+  assert.match(app, /state\.activeAudio = audio/);
 });

@@ -9,6 +9,27 @@
       content="IELTS Listening paraphrase drills using clear British pronunciation."
     />
     <title>IELTS Listening Paraphrase</title>
+    <link
+      rel="preload"
+      href="/audio/female/required.mp3"
+      as="audio"
+      type="audio/mpeg"
+    />
+    <link
+      rel="preload"
+      href="/audio/male/we-do-insist.mp3"
+      as="audio"
+      type="audio/mpeg"
+    />
+    <link
+      rel="preload"
+      href="/audio/male/collected-up.mp3"
+      as="audio"
+      type="audio/mpeg"
+    />
+    <link rel="preload" href="/audio/male/before.mp3" as="audio" type="audio/mpeg" />
+    <link rel="preload" href="/sfx/correct.mp3" as="audio" type="audio/mpeg" />
+    <link rel="preload" href="/sfx/wrong.mp3" as="audio" type="audio/mpeg" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -38,7 +59,7 @@
         </div>
 
         <p class="instruction" id="instruction" aria-live="polite">
-          Tap each card to listen
+          Listen, or choose if you’re sure
         </p>
 
         <section class="audio-stage" id="audioStage" aria-label="Listening drill">
@@ -80,7 +101,7 @@
             <span class="result-icon" aria-hidden="true"></span>
             <div class="card-actions">
               <button class="listen-action" id="option0Listen" type="button">Listen</button>
-              <button class="choose-button" id="option0Choose" type="button" disabled>Choose</button>
+              <button class="choose-button" id="option0Choose" type="button">Choose</button>
             </div>
           </article>
 
@@ -102,7 +123,7 @@
             <span class="result-icon" aria-hidden="true"></span>
             <div class="card-actions">
               <button class="listen-action" id="option1Listen" type="button">Listen</button>
-              <button class="choose-button" id="option1Choose" type="button" disabled>Choose</button>
+              <button class="choose-button" id="option1Choose" type="button">Choose</button>
             </div>
           </article>
 
@@ -124,7 +145,7 @@
             <span class="result-icon" aria-hidden="true"></span>
             <div class="card-actions">
               <button class="listen-action" id="option2Listen" type="button">Listen</button>
-              <button class="choose-button" id="option2Choose" type="button" disabled>Choose</button>
+              <button class="choose-button" id="option2Choose" type="button">Choose</button>
             </div>
           </article>
         </section>

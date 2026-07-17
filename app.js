@@ -29,19 +29,20 @@ const elements = {
 
 const storageKey = "ielts-listening-paraphrase-pilot-v2";
 const stored = readStoredState();
+const audioPool = new Map();
 const state = {
   index: Math.min(stored.index ?? 0, COURSE.drills.length - 1),
   results: stored.results ?? {},
   heard: { question: false, options: [false, false, false] },
   locked: false,
   firstTry: true,
-  activeAudio: new Audio(),
+  activeAudio: null,
   activeCard: null
 };
 
 const feedbackSounds = {
-  correct: new Audio("/sfx/correct.mp3"),
-  wrong: new Audio("/sfx/wrong.mp3")
+  correct: primeClip("/sfx/correct.mp3"),
+  wrong: primeClip("/sfx/wrong.mp3")
 };
 Object.values(feedbackSounds).forEach((audio) => {
   audio.preload = "auto";
@@ -92,10 +93,25 @@ function firstAttemptCount() {
   ).length;
 }
 
+function primeClip(src) {
+  if (audioPool.has(src)) return audioPool.get(src);
+  const audio = new Audio();
+  audio.preload = "auto";
+  audio.src = src;
+  audio.load();
+  audioPool.set(src, audio);
+  return audio;
+}
+
 function stopAudio() {
-  state.activeAudio.pause();
-  state.activeAudio.currentTime = 0;
+  state.activeAudio?.pause();
+  if (state.activeAudio) {
+    state.activeAudio.currentTime = 0;
+    state.activeAudio.onended = null;
+    state.activeAudio.onerror = null;
+  }
   state.activeCard?.classList.remove("is-playing");
+  state.activeAudio = null;
   state.activeCard = null;
 }
 
@@ -113,28 +129,31 @@ function playFeedback(kind) {
 
 async function playClip(card, src, onFinished) {
   stopAudio();
+  const audio = primeClip(src);
+  state.activeAudio = audio;
   state.activeCard = card;
-  state.activeAudio.src = src;
-  state.activeAudio.volume = 1;
-  state.activeAudio.preload = "auto";
+  audio.currentTime = 0;
+  audio.volume = 1;
   card.classList.add("is-playing");
   setInstruction("Listen carefully");
 
-  state.activeAudio.onended = () => {
+  audio.onended = () => {
     card.classList.remove("is-playing");
     card.classList.add("is-heard");
+    state.activeAudio = null;
     state.activeCard = null;
     onFinished();
     updateChoiceState();
   };
-  state.activeAudio.onerror = () => {
+  audio.onerror = () => {
     card.classList.remove("is-playing");
+    state.activeAudio = null;
     state.activeCard = null;
     setInstruction("Audio could not load — press Listen again", "wrong");
   };
 
   try {
-    await state.activeAudio.play();
+    await audio.play();
   } catch {
     card.classList.remove("is-playing");
     state.activeCard = null;
@@ -142,32 +161,24 @@ async function playClip(card, src, onFinished) {
   }
 }
 
-function allClipsHeard() {
-  return state.heard.question && state.heard.options.every(Boolean);
-}
-
 function updateChoiceState() {
-  const ready = allClipsHeard() && !state.locked;
+  const ready = !state.locked;
   elements.options.forEach(({ card, choose }) => {
-    choose.disabled = !ready;
+    choose.disabled = state.locked;
     card.classList.toggle("is-ready", ready);
   });
 
   if (state.locked) return;
-  if (ready) {
-    setInstruction("Now choose the paraphrase", "ready");
+  const heardCount = Number(state.heard.question) + state.heard.options.filter(Boolean).length;
+  if (heardCount > 0) {
+    setInstruction("Choose when you’re ready", "ready");
   } else {
-    const heardCount = state.heard.options.filter(Boolean).length;
-    setInstruction(
-      state.heard.question || heardCount
-        ? `Listen to every card · ${Number(state.heard.question) + heardCount}/4`
-        : "Tap Listen on each card"
-    );
+    setInstruction("Listen, or choose if you’re sure");
   }
 }
 
 function revealAnswer(selectedIndex, withFeedback = true) {
-  if (state.locked || !allClipsHeard()) return;
+  if (state.locked) return;
   const drill = currentDrill();
   const options = currentOptions();
   const selected = options[selectedIndex];
@@ -179,10 +190,10 @@ function revealAnswer(selectedIndex, withFeedback = true) {
     card.classList.remove("is-wrong");
     void card.offsetWidth;
     card.classList.add("is-wrong");
-    setInstruction("Not that one — listen and choose again", "wrong");
+    setInstruction("Not that one — listen or choose again", "wrong");
     window.setTimeout(() => {
       card.classList.remove("is-wrong");
-      if (!state.locked) setInstruction("Now choose the paraphrase", "ready");
+      if (!state.locked) setInstruction("Choose when you’re ready", "ready");
     }, 520);
     return;
   }
@@ -234,22 +245,23 @@ function clearCardState(card) {
   );
 }
 
-function preloadNext() {
-  const next = COURSE.drills[state.index + 1];
-  if (!next) return;
+function drillAudioSources(index) {
+  const next = COURSE.drills[index];
+  if (!next) return [];
   const distractors =
-    (state.index + 1) % 2 === 0
+    index % 2 === 0
       ? [next.distractor, next.distractor2]
       : [next.distractor2, next.distractor];
   const choices = distractors.slice();
-  choices.splice(correctPosition(state.index + 1), 0, next.answer);
-  [audioPath("female", next.question), ...choices.map((text) => audioPath("male", text))].forEach(
-    (src) => {
-      const audio = new Audio();
-      audio.preload = "auto";
-      audio.src = src;
-    }
-  );
+  choices.splice(correctPosition(index), 0, next.answer);
+  return [
+    audioPath("female", next.question),
+    ...choices.map((text) => audioPath("male", text))
+  ];
+}
+
+function preloadCurrentAndNext() {
+  [...drillAudioSources(state.index), ...drillAudioSources(state.index + 1)].forEach(primeClip);
 }
 
 function render() {
@@ -264,7 +276,7 @@ function render() {
   clearCardState(elements.questionCard);
   elements.options.forEach(({ card, choose, text, listen }, index) => {
     clearCardState(card);
-    choose.disabled = true;
+    choose.disabled = false;
     text.textContent = "";
     listen.setAttribute("aria-label", `Listen to option ${optionLetters[index]}`);
     choose.setAttribute("aria-label", `Choose option ${optionLetters[index]}`);
@@ -287,7 +299,7 @@ function render() {
   }
 
   saveState();
-  preloadNext();
+  preloadCurrentAndNext();
 }
 
 function nextDrill() {
