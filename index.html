@@ -1,13 +1,135 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="扣子编程，你的 AI 开发伙伴已就位" />
-    <title>扣子编程 - AI 开发伙伴</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#e9f1ee" />
+    <meta
+      name="description"
+      content="IELTS Listening paraphrase drills using clear British pronunciation."
+    />
+    <title>IELTS Listening Paraphrase</title>
+    <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <div id="app"></div>
-    <script type="module" src="/src/index.ts"></script>
+    <div class="page-shell">
+      <header class="site-header">
+        <div>
+          <p class="eyebrow">Cambridge IELTS 11</p>
+          <h1>Listening Paraphrase</h1>
+        </div>
+        <button class="theme-button" id="themeButton" type="button" aria-label="Switch to dark theme">
+          <span class="theme-icon" aria-hidden="true">☼</span>
+          <span class="theme-label">Dark</span>
+        </button>
+      </header>
+
+      <main class="practice" id="practice">
+        <section class="practice-meta" aria-label="Exercise progress">
+          <div>
+            <p class="test-label" id="testLabel">Test 1 · Part 1</p>
+            <p class="part-title" id="partTitle">Hiring a public room</p>
+          </div>
+          <p class="score" id="scoreLabel">0/30</p>
+        </section>
+
+        <div class="progress-track" aria-hidden="true">
+          <span class="progress-fill" id="progressFill"></span>
+        </div>
+
+        <p class="instruction" id="instruction" aria-live="polite">
+          Listen to the question
+        </p>
+
+        <section class="audio-stage" id="audioStage" aria-label="Listening drill">
+          <button class="audio-card question-card" id="questionCard" type="button">
+            <span class="card-status">
+              <span class="speaker" aria-hidden="true">
+                <svg viewBox="0 0 32 32" role="img">
+                  <path d="M6 13h5l6-5v16l-6-5H6z"></path>
+                  <path d="M21 12c2.7 2.1 2.7 5.9 0 8"></path>
+                  <path d="M24.5 8.5c5 4.1 5 10.9 0 15"></path>
+                </svg>
+              </span>
+              <span class="card-kicker">Question</span>
+              <span class="heard-mark" aria-hidden="true">heard</span>
+            </span>
+            <span class="term-text" id="questionText"></span>
+            <span class="tap-hint">tap to listen</span>
+          </button>
+
+          <div class="option-grid">
+            <button class="audio-card option-card" id="leftCard" type="button" disabled>
+              <span class="card-status">
+                <span class="speaker" aria-hidden="true">
+                  <svg viewBox="0 0 32 32" role="img">
+                    <path d="M6 13h5l6-5v16l-6-5H6z"></path>
+                    <path d="M21 12c2.7 2.1 2.7 5.9 0 8"></path>
+                    <path d="M24.5 8.5c5 4.1 5 10.9 0 15"></path>
+                  </svg>
+                </span>
+                <span class="card-kicker">A</span>
+                <span class="heard-mark" aria-hidden="true">heard</span>
+              </span>
+              <span class="term-text" id="leftText"></span>
+              <span class="tap-hint">tap to listen</span>
+            </button>
+
+            <button class="audio-card option-card" id="rightCard" type="button" disabled>
+              <span class="card-status">
+                <span class="speaker" aria-hidden="true">
+                  <svg viewBox="0 0 32 32" role="img">
+                    <path d="M6 13h5l6-5v16l-6-5H6z"></path>
+                    <path d="M21 12c2.7 2.1 2.7 5.9 0 8"></path>
+                    <path d="M24.5 8.5c5 4.1 5 10.9 0 15"></path>
+                  </svg>
+                </span>
+                <span class="card-kicker">B</span>
+                <span class="heard-mark" aria-hidden="true">heard</span>
+              </span>
+              <span class="term-text" id="rightText"></span>
+              <span class="tap-hint">tap to listen</span>
+            </button>
+          </div>
+        </section>
+
+        <nav class="practice-nav" aria-label="Practice controls">
+          <button class="text-button" id="backButton" type="button">‹ Back</button>
+          <button class="text-button restart-button" id="restartButton" type="button">Start over</button>
+          <button class="text-button next-button" id="nextButton" type="button" disabled>Next ›</button>
+        </nav>
+      </main>
+
+      <footer class="site-footer">
+        <span>海归湾国际教育（天津）雅思精准学习中心</span>
+        <a href="tel:4000616820">400-061-6820</a>
+      </footer>
+    </div>
+
+    <section class="finish-screen" id="finishScreen" hidden>
+      <div class="finish-card" role="dialog" aria-modal="true" aria-labelledby="finishTitle">
+        <p class="celebration-kicker">Test complete</p>
+        <h2 id="finishTitle">Congratulations</h2>
+        <p class="finish-copy">Cambridge IELTS 11 · Test 1</p>
+        <div class="finish-stats">
+          <div>
+            <strong>30/30</strong>
+            <span>drills complete</span>
+          </div>
+          <div>
+            <strong id="accuracyValue">100%</strong>
+            <span>first attempt</span>
+          </div>
+        </div>
+        <button class="primary-button" id="practiseAgainButton" type="button">
+          Practise this test again
+        </button>
+        <button class="future-button" type="button" disabled>
+          Cambridge 11 Test 2 · coming soon
+        </button>
+      </div>
+    </section>
+
+    <script type="module" src="/app.js"></script>
   </body>
 </html>

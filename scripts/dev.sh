@@ -1,11 +1,9 @@
 #!/bin/bash
 set -Eeuo pipefail
 
-
 PORT=5000
 COZE_WORKSPACE_PATH="${COZE_WORKSPACE_PATH:-$(pwd)}"
 DEPLOY_RUN_PORT="${DEPLOY_RUN_PORT:-${PORT}}"
-
 
 cd "${COZE_WORKSPACE_PATH}"
 
@@ -29,6 +27,6 @@ kill_port_if_listening() {
 
 echo "Clearing port ${DEPLOY_RUN_PORT} before start."
 kill_port_if_listening
-echo "Starting express + Vite dev server on port ${DEPLOY_RUN_PORT}..."
+echo "Starting Vite dev server on port ${DEPLOY_RUN_PORT}..."
 
-PORT=${DEPLOY_RUN_PORT} pnpm tsx watch server/server.ts
+PORT=${DEPLOY_RUN_PORT} pnpm vite --host 0.0.0.0 --port ${DEPLOY_RUN_PORT}
