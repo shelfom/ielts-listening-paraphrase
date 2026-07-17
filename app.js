@@ -1,4 +1,4 @@
-import { COURSE, audioPath, correctPosition } from "./data.js";
+import { COURSE, PEP_TALKS, audioPath, correctPosition } from "./data.js";
 
 const $ = (id) => document.getElementById(id);
 const optionLetters = ["A", "B", "C"];
@@ -22,15 +22,21 @@ const elements = {
   nextButton: $("nextButton"),
   themeButton: $("themeButton"),
   finishScreen: $("finishScreen"),
+  finishKicker: $("finishKicker"),
+  finishCopy: $("finishCopy"),
+  pepTalk: $("pepTalk"),
+  completionValue: $("completionValue"),
   accuracyValue: $("accuracyValue"),
+  continueTestButton: $("continueTestButton"),
   practiseAgainButton: $("practiseAgainButton")
 };
 
-const storageKey = "ielts-listening-paraphrase-pilot-v2";
+const storageKey = "ielts-listening-paraphrase-v3";
 const stored = readStoredState();
 const audioPool = new Map();
 const state = {
-  index: Math.min(stored.index ?? 0, COURSE.drills.length - 1),
+  testIndex: Math.min(Math.max(stored.testIndex ?? 0, 0), COURSE.tests.length - 1),
+  drillIndex: 0,
   results: stored.results ?? {},
   heard: { question: false, options: [false, false, false] },
   locked: false,
@@ -38,6 +44,10 @@ const state = {
   activeAudio: null,
   activeCard: null
 };
+state.drillIndex = Math.min(
+  Math.max(stored.drillIndex ?? 0, 0),
+  currentTest().drills.length - 1
+);
 
 const feedbackSounds = {
   correct: primeClip("/sfx/correct.mp3"),
@@ -59,36 +69,44 @@ function readStoredState() {
 function saveState() {
   localStorage.setItem(
     storageKey,
-    JSON.stringify({ index: state.index, results: state.results })
+    JSON.stringify({
+      testIndex: state.testIndex,
+      drillIndex: state.drillIndex,
+      results: state.results
+    })
   );
 }
 
+function currentTest() {
+  return COURSE.tests[state.testIndex];
+}
+
 function currentDrill() {
-  return COURSE.drills[state.index];
+  return currentTest().drills[state.drillIndex];
 }
 
 function currentPart() {
-  return COURSE.parts.find((part) => part.number === currentDrill().part);
+  return currentTest().parts.find((part) => part.number === currentDrill().part);
 }
 
 function currentOptions() {
   const drill = currentDrill();
   const distractors =
-    state.index % 2 === 0
+    state.drillIndex % 2 === 0
       ? [drill.distractor, drill.distractor2]
       : [drill.distractor2, drill.distractor];
   const options = distractors.map((text) => ({ text, correct: false }));
-  options.splice(correctPosition(state.index), 0, { text: drill.answer, correct: true });
+  options.splice(correctPosition(state.drillIndex), 0, { text: drill.answer, correct: true });
   return options;
 }
 
-function completedCount() {
-  return Object.values(state.results).filter((result) => result.completed).length;
+function completedCount(test = currentTest()) {
+  return test.drills.filter((drill) => state.results[drill.id]?.completed).length;
 }
 
-function firstAttemptCount() {
-  return Object.values(state.results).filter(
-    (result) => result.completed && result.firstTryCorrect
+function firstAttemptCount(test = currentTest()) {
+  return test.drills.filter(
+    (drill) => state.results[drill.id]?.completed && state.results[drill.id]?.firstTryCorrect
   ).length;
 }
 
@@ -169,11 +187,7 @@ function updateChoiceState() {
 
   if (state.locked) return;
   const heardCount = Number(state.heard.question) + state.heard.options.filter(Boolean).length;
-  if (heardCount > 0) {
-    setInstruction("Choose when ready", "ready");
-  } else {
-    setInstruction("Listen or choose");
-  }
+  setInstruction(heardCount > 0 ? "Choose when ready" : "Listen or choose", heardCount > 0 ? "ready" : "");
 }
 
 function revealAnswer(selectedIndex, withFeedback = true) {
@@ -224,12 +238,13 @@ function revealAnswer(selectedIndex, withFeedback = true) {
 }
 
 function updateProgress() {
+  const test = currentTest();
   const currentCompleted = Boolean(state.results[currentDrill().id]?.completed);
   const visibleProgress = currentCompleted
-    ? Math.max(completedCount(), state.index + 1)
-    : completedCount();
-  elements.scoreLabel.textContent = `${visibleProgress}/${COURSE.total}`;
-  elements.progressFill.style.width = `${(visibleProgress / COURSE.total) * 100}%`;
+    ? Math.max(completedCount(test), state.drillIndex + 1)
+    : completedCount(test);
+  elements.scoreLabel.textContent = `${visibleProgress}/${test.total}`;
+  elements.progressFill.style.width = `${(visibleProgress / test.total) * 100}%`;
 }
 
 function clearCardState(card) {
@@ -244,29 +259,32 @@ function clearCardState(card) {
   );
 }
 
-function drillAudioSources(index) {
-  const next = COURSE.drills[index];
-  if (!next) return [];
+function drillAudioSources(testIndex, drillIndex) {
+  const drill = COURSE.tests[testIndex]?.drills[drillIndex];
+  if (!drill) return [];
   const distractors =
-    index % 2 === 0
-      ? [next.distractor, next.distractor2]
-      : [next.distractor2, next.distractor];
+    drillIndex % 2 === 0
+      ? [drill.distractor, drill.distractor2]
+      : [drill.distractor2, drill.distractor];
   const choices = distractors.slice();
-  choices.splice(correctPosition(index), 0, next.answer);
-  return [
-    audioPath("female", next.question),
-    ...choices.map((text) => audioPath("male", text))
-  ];
+  choices.splice(correctPosition(drillIndex), 0, drill.answer);
+  return [audioPath("female", drill.question), ...choices.map((text) => audioPath("male", text))];
 }
 
 function preloadCurrentAndNext() {
-  [...drillAudioSources(state.index), ...drillAudioSources(state.index + 1)].forEach(primeClip);
+  const nextTestIndex =
+    state.drillIndex === currentTest().drills.length - 1 ? state.testIndex + 1 : state.testIndex;
+  const nextDrillIndex =
+    state.drillIndex === currentTest().drills.length - 1 ? 0 : state.drillIndex + 1;
+  [...drillAudioSources(state.testIndex, state.drillIndex), ...drillAudioSources(nextTestIndex, nextDrillIndex)]
+    .forEach(primeClip);
 }
 
 function render() {
   stopAudio();
   const drill = currentDrill();
   const part = currentPart();
+  const test = currentTest();
   const result = state.results[drill.id];
 
   state.heard = { question: false, options: [false, false, false] };
@@ -283,48 +301,81 @@ function render() {
 
   elements.questionText.textContent = drill.question;
   elements.questionListen.setAttribute("aria-label", `Listen to the word: ${drill.question}`);
-  elements.testLabel.textContent = `Cambridge ${COURSE.book} · Test ${COURSE.test} · Part ${part.number}`;
+  elements.testLabel.textContent = `Cambridge ${test.book} · Test ${test.test} · Part ${part.number}`;
   elements.nextButton.disabled = true;
-  elements.backButton.disabled = state.index === 0;
+  elements.backButton.disabled = state.testIndex === 0 && state.drillIndex === 0;
   updateProgress();
   updateChoiceState();
 
   if (result?.completed) {
     state.heard = { question: true, options: [true, true, true] };
     state.firstTry = result.firstTryCorrect;
-    state.locked = false;
-    revealAnswer(correctPosition(state.index), false);
+    revealAnswer(correctPosition(state.drillIndex), false);
   }
 
   saveState();
   preloadCurrentAndNext();
 }
 
+function showFinishScreen() {
+  const test = currentTest();
+  const nextTest = COURSE.tests[state.testIndex + 1];
+  const accuracy = Math.round((firstAttemptCount(test) / test.total) * 100);
+  elements.finishKicker.textContent = nextTest ? "Test complete" : "Course complete";
+  elements.finishCopy.textContent = `Cambridge IELTS ${test.book} · Test ${test.test}`;
+  elements.pepTalk.textContent = PEP_TALKS[state.testIndex];
+  elements.completionValue.textContent = `${test.total}/${test.total}`;
+  elements.accuracyValue.textContent = `${accuracy}%`;
+  elements.continueTestButton.textContent = nextTest
+    ? `Continue · Cambridge ${nextTest.book} Test ${nextTest.test}`
+    : "Start Cambridge 11 Test 1";
+  elements.practiseAgainButton.textContent = "Practise this test again";
+  elements.finishScreen.hidden = false;
+  elements.continueTestButton.focus({ preventScroll: true });
+}
+
 function nextDrill() {
   if (!state.locked) return;
-  if (state.index === COURSE.drills.length - 1) {
-    elements.accuracyValue.textContent = `${Math.round(
-      (firstAttemptCount() / COURSE.total) * 100
-    )}%`;
-    elements.finishScreen.hidden = false;
-    elements.practiseAgainButton.focus({ preventScroll: true });
+  if (state.drillIndex === currentTest().drills.length - 1) {
+    showFinishScreen();
     return;
   }
-  state.index += 1;
+  state.drillIndex += 1;
   render();
 }
 
 function previousDrill() {
-  if (state.index === 0) return;
-  state.index -= 1;
+  if (state.drillIndex > 0) {
+    state.drillIndex -= 1;
+    render();
+    return;
+  }
+  if (state.testIndex > 0) {
+    state.testIndex -= 1;
+    state.drillIndex = currentTest().drills.length - 1;
+    render();
+  }
+}
+
+function restartCurrentTest() {
+  stopAudio();
+  currentTest().drills.forEach((drill) => delete state.results[drill.id]);
+  state.drillIndex = 0;
+  elements.finishScreen.hidden = true;
   render();
 }
 
-function restartTest() {
-  stopAudio();
-  localStorage.removeItem(storageKey);
-  state.index = 0;
-  state.results = {};
+function continueAfterFinish() {
+  const nextTest = COURSE.tests[state.testIndex + 1];
+  if (!nextTest) {
+    stopAudio();
+    state.testIndex = 0;
+    state.drillIndex = 0;
+    state.results = {};
+  } else {
+    state.testIndex += 1;
+    state.drillIndex = 0;
+  }
   elements.finishScreen.hidden = true;
   render();
 }
@@ -335,38 +386,30 @@ function setTheme(theme) {
   const dark = theme === "dark";
   elements.themeButton.querySelector(".theme-icon").textContent = dark ? "☾" : "☼";
   elements.themeButton.querySelector(".theme-label").textContent = dark ? "Light" : "Dark";
-  elements.themeButton.setAttribute(
-    "aria-label",
-    `Switch to ${dark ? "light" : "dark"} theme`
-  );
-  document
-    .querySelector('meta[name="theme-color"]')
-    .setAttribute("content", dark ? "#111916" : "#e9f1ee");
+  elements.themeButton.setAttribute("aria-label", `Switch to ${dark ? "light" : "dark"} theme`);
+  document.querySelector('meta[name="theme-color"]').setAttribute("content", dark ? "#111916" : "#e9f1ee");
 }
 
 elements.questionListen.addEventListener("click", () => {
-  playClip(
-    elements.questionCard,
-    audioPath("female", currentDrill().question),
-    () => (state.heard.question = true)
-  );
+  playClip(elements.questionCard, audioPath("female", currentDrill().question), () => {
+    state.heard.question = true;
+  });
 });
 
 elements.options.forEach(({ card, listen, choose }, index) => {
   listen.addEventListener("click", () => {
-    playClip(
-      card,
-      audioPath("male", currentOptions()[index].text),
-      () => (state.heard.options[index] = true)
-    );
+    playClip(card, audioPath("male", currentOptions()[index].text), () => {
+      state.heard.options[index] = true;
+    });
   });
   choose.addEventListener("click", () => revealAnswer(index));
 });
 
 elements.backButton.addEventListener("click", previousDrill);
 elements.nextButton.addEventListener("click", nextDrill);
-elements.restartButton.addEventListener("click", restartTest);
-elements.practiseAgainButton.addEventListener("click", restartTest);
+elements.restartButton.addEventListener("click", restartCurrentTest);
+elements.continueTestButton.addEventListener("click", continueAfterFinish);
+elements.practiseAgainButton.addEventListener("click", restartCurrentTest);
 elements.themeButton.addEventListener("click", () => {
   setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
 });
@@ -389,4 +432,10 @@ if ("serviceWorker" in navigator) {
   }
 }
 
-window.__IELTS_LISTENING_APP__ = { COURSE, state, currentOptions };
+window.__IELTS_LISTENING_APP__ = {
+  COURSE,
+  state,
+  currentOptions,
+  currentTest,
+  currentDrill
+};

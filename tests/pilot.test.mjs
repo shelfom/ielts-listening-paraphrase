@@ -1,56 +1,84 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync, statSync } from "node:fs";
-import { COURSE, audioKey, correctPosition } from "../data.js";
+import { ALL_DRILLS, ALL_TESTS, COURSE, PEP_TALKS, audioKey, correctPosition } from "../data.js";
 
-test("pilot contains Cambridge 11 Test 1 from required to purpose", () => {
-  assert.equal(COURSE.book, 11);
-  assert.equal(COURSE.test, 1);
-  assert.equal(COURSE.drills.length, 30);
-  assert.equal(COURSE.drills[0].question, "required");
-  assert.equal(COURSE.drills[0].answer, "we do insist");
-  assert.equal(COURSE.drills[0].distractor, "collected up");
-  assert.equal(COURSE.drills[0].distractor2, "before");
-  assert.equal(COURSE.drills.at(-1).question, "purpose");
-  assert.equal(COURSE.drills.at(-1).answer, "so that");
+test("course covers Books 11–19 from required through higher risk of", () => {
+  assert.equal(COURSE.tests.length, 36);
+  assert.equal(COURSE.total, 1825);
+  assert.deepEqual(ALL_DRILLS[0], {
+    id: "11-1-1-01",
+    book: 11,
+    test: 1,
+    part: 1,
+    question: "required",
+    answer: "we do insist",
+    distractor: ALL_DRILLS[0].distractor,
+    distractor2: ALL_DRILLS[0].distractor2,
+    distractorScope: "same-part"
+  });
+  assert.equal(ALL_DRILLS.at(-1).book, 19);
+  assert.equal(ALL_DRILLS.at(-1).test, 4);
+  assert.equal(ALL_DRILLS.at(-1).part, 4);
+  assert.equal(ALL_DRILLS.at(-1).question, "higher risk of");
+  assert.equal(ALL_DRILLS.at(-1).answer, "increased threat of");
 });
 
-test("all four Parts have the workbook counts", () => {
-  const counts = new Map();
-  COURSE.drills.forEach((drill) => counts.set(drill.part, (counts.get(drill.part) || 0) + 1));
-  assert.deepEqual(Object.fromEntries(counts), { 1: 9, 2: 3, 3: 8, 4: 10 });
+test("first Test retains the accepted 30-drill, four-Part sequence", () => {
+  const firstTest = ALL_TESTS[0];
+  assert.equal(firstTest.book, 11);
+  assert.equal(firstTest.test, 1);
+  assert.equal(firstTest.total, 30);
+  assert.deepEqual(firstTest.parts.map((part) => part.total), [9, 3, 8, 10]);
+  assert.equal(firstTest.drills.at(-1).question, "purpose");
+  assert.equal(firstTest.drills.at(-1).answer, "so that");
 });
 
-test("both distractors come from answers in the same Part", () => {
-  for (const drill of COURSE.drills) {
-    const samePartAnswers = COURSE.drills
-      .filter((candidate) => candidate.part === drill.part)
-      .map((candidate) => candidate.answer);
-    assert.ok(samePartAnswers.includes(drill.distractor), drill.id);
-    assert.ok(samePartAnswers.includes(drill.distractor2), drill.id);
-    assert.notEqual(drill.answer, drill.distractor, drill.id);
-    assert.notEqual(drill.answer, drill.distractor2, drill.id);
-    assert.notEqual(drill.distractor, drill.distractor2, drill.id);
+test("distractors stay in the original Listening Part whenever the source supplies two", () => {
+  for (const testData of ALL_TESTS) {
+    for (const drill of testData.drills) {
+      const samePartAnswers = testData.drills
+        .filter((candidate) => candidate.part === drill.part)
+        .map((candidate) => candidate.answer);
+      assert.notEqual(drill.answer, drill.distractor, drill.id);
+      assert.notEqual(drill.answer, drill.distractor2, drill.id);
+      assert.notEqual(drill.distractor, drill.distractor2, drill.id);
+      if (drill.distractorScope === "same-part") {
+        assert.ok(samePartAnswers.includes(drill.distractor), drill.id);
+        assert.ok(samePartAnswers.includes(drill.distractor2), drill.id);
+      }
+    }
   }
+  const exceptions = ALL_DRILLS.filter((drill) => drill.distractorScope !== "same-part");
+  assert.deepEqual(exceptions.map((drill) => drill.id), ["11-3-3-01", "11-3-3-02"]);
 });
 
-test("three answer positions are deterministic and perfectly balanced", () => {
-  const positions = [0, 1, 2].map(
-    (position) => COURSE.drills.filter((_, index) => correctPosition(index) === position).length
+test("answer positions are deterministic and balanced within each Test", () => {
+  for (const testData of ALL_TESTS) {
+    const positions = [0, 1, 2].map(
+      (position) => testData.drills.filter((_, index) => correctPosition(index) === position).length
+    );
+    assert.ok(Math.max(...positions) - Math.min(...positions) <= 1, testData.id);
+  }
+  assert.deepEqual(
+    [0, 1, 2].map((position) => ALL_TESTS[0].drills.filter((_, index) => correctPosition(index) === position).length),
+    [10, 10, 10]
   );
-  assert.deepEqual(positions, [10, 10, 10]);
 });
 
-test("ids and audio keys are stable", () => {
-  assert.equal(new Set(COURSE.drills.map((drill) => drill.id)).size, 30);
+test("ids, audio keys, and Book 20 readiness remain stable", () => {
+  assert.equal(new Set(ALL_DRILLS.map((drill) => drill.id)).size, 1825);
   assert.equal(audioKey("don't touch"), "dont-touch");
   assert.equal(audioKey("you'll be informed of"), "youll-be-informed-of");
   assert.equal(audioKey("STEM disciplines"), "stem-disciplines");
+  assert.equal(COURSE.futureBookReady, 20);
+  assert.equal(COURSE.total, ALL_DRILLS.length);
 });
 
-test("Book 20 is supported by data, not hard-coded totals", () => {
-  assert.equal(COURSE.futureBookReady, 20);
-  assert.equal(COURSE.total, COURSE.drills.length);
+test("each Test has a distinct pep talk", () => {
+  assert.equal(PEP_TALKS.length, ALL_TESTS.length);
+  assert.equal(new Set(PEP_TALKS).size, ALL_TESTS.length);
+  assert.match(PEP_TALKS.at(-1), /Full course complete/);
 });
 
 test("correct and wrong game feedback sounds are bundled", () => {
@@ -70,7 +98,7 @@ test("Choose is available immediately and does not require listening first", () 
   assert.doesNotMatch(app, /!allClipsHeard\(\)/);
 });
 
-test("current and next drill audio are held in a persistent preload pool", () => {
+test("current and following drill audio are held in a persistent preload pool", () => {
   const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
   assert.match(app, /const audioPool = new Map\(\)/);
   assert.match(app, /function primeClip\(src\)/);
@@ -82,11 +110,19 @@ test("Back and Next sit below the listening cards", () => {
   const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
   const navigation = html.indexOf('class="practice-nav"');
   const cards = html.indexOf('class="audio-stage"');
-  assert.ok(navigation > -1);
-  assert.ok(cards > -1);
   assert.ok(navigation > cards);
   assert.match(html, /class="text-button back-button"/);
   assert.match(html, /class="text-button next-button"/);
+});
+
+test("completion screen progresses Test by Test and preserves pep talks", () => {
+  const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
+  assert.match(html, /id="pepTalk"/);
+  assert.match(html, /id="continueTestButton"/);
+  assert.match(app, /function showFinishScreen\(\)/);
+  assert.match(app, /function continueAfterFinish\(\)/);
+  assert.match(app, /state\.testIndex \+= 1/);
 });
 
 test("phone practice shell is fixed and IELTS-led", () => {

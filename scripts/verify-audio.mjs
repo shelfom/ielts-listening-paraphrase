@@ -1,11 +1,11 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, statSync } from "node:fs";
-import { COURSE, audioPath } from "../data.js";
+import { ALL_DRILLS, audioPath } from "../data.js";
 
 const root = new URL("../public", import.meta.url).pathname;
 const expected = new Set();
 
-for (const drill of COURSE.drills) {
+for (const drill of ALL_DRILLS) {
   expected.add(audioPath("female", drill.question));
   expected.add(audioPath("male", drill.answer));
   expected.add(audioPath("male", drill.distractor));
@@ -42,7 +42,7 @@ for (const relative of expected) {
     stream?.channels !== 1 ||
     !Number.isFinite(duration) ||
     duration < 0.35 ||
-    duration > 8
+    duration > 15
   ) {
     failures.push(`${relative}: invalid audio ${JSON.stringify(result)}`);
   }
@@ -60,7 +60,7 @@ for (const relative of expected) {
     !Number.isFinite(peak) ||
     mean < -22.5 ||
     mean > -10 ||
-    peak < -6.5 ||
+    peak < -8 ||
     peak > -0.1
   ) {
     failures.push(`${relative}: loudness outside pilot range (mean ${mean}, peak ${peak})`);

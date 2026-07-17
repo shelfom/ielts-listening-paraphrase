@@ -604,6 +604,16 @@ h1 {
   color: var(--muted);
 }
 
+.pep-talk {
+  max-width: 32rem;
+  margin: 12px auto 0;
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: clamp(1rem, 2.8vw, 1.3rem);
+  font-style: italic;
+  line-height: 1.35;
+}
+
 .finish-stats {
   margin: clamp(24px, 5vw, 38px) 0;
   display: grid;
@@ -636,9 +646,9 @@ h1 {
 }
 
 .primary-button,
-.future-button {
+.secondary-button {
   width: 100%;
-  border-radius: 3px;
+  border-radius: 999px;
   padding: 14px 18px;
 }
 
@@ -650,12 +660,17 @@ h1 {
   font-weight: 700;
 }
 
-.future-button {
+.secondary-button {
   margin-top: 10px;
   border: 1px solid color-mix(in srgb, var(--line) 65%, transparent);
   color: var(--muted);
   background: transparent;
-  opacity: 0.62;
+  cursor: pointer;
+}
+
+.secondary-button:hover {
+  color: var(--ink);
+  border-color: var(--accent);
 }
 
 @keyframes breathe {
@@ -768,6 +783,22 @@ h1 {
     min-height: auto;
     padding-inline: 3px;
     font-size: 0.64rem;
+  }
+
+  .finish-screen {
+    padding: 16px;
+  }
+
+  .finish-card {
+    padding: 26px 22px;
+  }
+
+  .finish-stats {
+    margin: 20px 0;
+  }
+
+  .finish-stats div {
+    padding: 16px 8px;
   }
 }
 
