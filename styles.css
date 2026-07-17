@@ -380,6 +380,8 @@ h1 {
 }
 
 .option-card .card-actions {
+  position: relative;
+  z-index: 4;
   min-height: 96px;
   grid-template-columns: 1fr;
   grid-template-rows: repeat(2, minmax(0, 1fr));
@@ -391,7 +393,10 @@ h1 {
 
 .option-card .listen-action,
 .option-card .choose-button {
+  position: relative;
+  z-index: 5;
   width: min(48%, 210px);
+  touch-action: manipulation;
 }
 
 .option-card .listen-action {
