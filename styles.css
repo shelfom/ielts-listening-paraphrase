@@ -160,7 +160,7 @@ h1 {
   min-height: 0;
   overflow: hidden;
   display: grid;
-  grid-template-rows: auto 2px auto auto minmax(0, 1fr);
+  grid-template-rows: auto 2px auto minmax(0, 1fr) auto;
   align-content: stretch;
 }
 
@@ -470,7 +470,7 @@ h1 {
 }
 
 .practice-nav {
-  margin: 0 0 clamp(7px, 1vh, 10px);
+  margin: clamp(7px, 1vh, 10px) 0 0;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
@@ -754,7 +754,7 @@ h1 {
   }
 
   .practice-nav {
-    margin-bottom: 8px;
+    margin-top: 8px;
     gap: 7px;
   }
 
@@ -792,7 +792,7 @@ h1 {
   }
 
   .practice-nav {
-    margin-bottom: 6px;
+    margin-top: 6px;
   }
 
   .text-button {
