@@ -77,3 +77,14 @@ test("current and next drill audio are held in a persistent preload pool", () =>
   assert.match(app, /preloadCurrentAndNext\(\)/);
   assert.match(app, /state\.activeAudio = audio/);
 });
+
+test("Back and Next sit above the listening cards", () => {
+  const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const navigation = html.indexOf('class="practice-nav"');
+  const cards = html.indexOf('class="audio-stage"');
+  assert.ok(navigation > -1);
+  assert.ok(cards > -1);
+  assert.ok(navigation < cards);
+  assert.match(html, /class="text-button back-button"/);
+  assert.match(html, /class="text-button next-button"/);
+});
