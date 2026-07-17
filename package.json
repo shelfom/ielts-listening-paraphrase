@@ -12,6 +12,7 @@
     "verify:audio": "node scripts/verify-audio.mjs"
   },
   "devDependencies": {
+    "serve": "^14.2.6",
     "vite": "^7.0.4"
   }
 }
