@@ -88,3 +88,14 @@ test("Back and Next sit above the listening cards", () => {
   assert.match(html, /class="text-button back-button"/);
   assert.match(html, /class="text-button next-button"/);
 });
+
+test("phone practice shell is fixed and IELTS-led", () => {
+  const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const styles = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
+  assert.match(html, /class="brand-ielts">IELTS</);
+  assert.doesNotMatch(html, /Hiring a public room/);
+  assert.match(styles, /height: 100dvh/);
+  assert.match(styles, /html,\s*body \{[\s\S]*overflow: hidden/);
+  assert.match(styles, /\.practice \{[\s\S]*grid-template-rows:[\s\S]*minmax\(0, 1fr\)/);
+  assert.match(styles, /\.audio-stage \{[\s\S]*grid-template-rows: repeat\(2, minmax\(0, 1fr\)\)/);
+});

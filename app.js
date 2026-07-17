@@ -5,7 +5,6 @@ const optionLetters = ["A", "B", "C"];
 
 const elements = {
   testLabel: $("testLabel"),
-  partTitle: $("partTitle"),
   scoreLabel: $("scoreLabel"),
   progressFill: $("progressFill"),
   instruction: $("instruction"),
@@ -135,7 +134,7 @@ async function playClip(card, src, onFinished) {
   audio.currentTime = 0;
   audio.volume = 1;
   card.classList.add("is-playing");
-  setInstruction("Listen carefully");
+  setInstruction("Listening");
 
   audio.onended = () => {
     card.classList.remove("is-playing");
@@ -149,7 +148,7 @@ async function playClip(card, src, onFinished) {
     card.classList.remove("is-playing");
     state.activeAudio = null;
     state.activeCard = null;
-    setInstruction("Audio could not load — press Listen again", "wrong");
+    setInstruction("Audio unavailable — try again", "wrong");
   };
 
   try {
@@ -157,7 +156,7 @@ async function playClip(card, src, onFinished) {
   } catch {
     card.classList.remove("is-playing");
     state.activeCard = null;
-    setInstruction("Press Listen again to play the audio", "wrong");
+    setInstruction("Tap Listen again", "wrong");
   }
 }
 
@@ -171,9 +170,9 @@ function updateChoiceState() {
   if (state.locked) return;
   const heardCount = Number(state.heard.question) + state.heard.options.filter(Boolean).length;
   if (heardCount > 0) {
-    setInstruction("Choose when you’re ready", "ready");
+    setInstruction("Choose when ready", "ready");
   } else {
-    setInstruction("Listen, or choose if you’re sure");
+    setInstruction("Listen or choose");
   }
 }
 
@@ -190,10 +189,10 @@ function revealAnswer(selectedIndex, withFeedback = true) {
     card.classList.remove("is-wrong");
     void card.offsetWidth;
     card.classList.add("is-wrong");
-    setInstruction("Not that one — listen or choose again", "wrong");
+    setInstruction("Try again", "wrong");
     window.setTimeout(() => {
       card.classList.remove("is-wrong");
-      if (!state.locked) setInstruction("Choose when you’re ready", "ready");
+      if (!state.locked) setInstruction("Choose when ready", "ready");
     }, 520);
     return;
   }
@@ -219,7 +218,7 @@ function revealAnswer(selectedIndex, withFeedback = true) {
   });
 
   elements.nextButton.disabled = false;
-  setInstruction("That’s the paraphrase", "correct");
+  setInstruction("Correct", "correct");
   updateProgress();
   navigator.vibrate?.(14);
 }
@@ -284,8 +283,7 @@ function render() {
 
   elements.questionText.textContent = drill.question;
   elements.questionListen.setAttribute("aria-label", `Listen to the word: ${drill.question}`);
-  elements.testLabel.textContent = `Test ${COURSE.test} · Part ${part.number}`;
-  elements.partTitle.textContent = part.title;
+  elements.testLabel.textContent = `Cambridge ${COURSE.book} · Test ${COURSE.test} · Part ${part.number}`;
   elements.nextButton.disabled = true;
   elements.backButton.disabled = state.index === 0;
   updateProgress();
