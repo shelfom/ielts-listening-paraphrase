@@ -1,0 +1,17 @@
+[project]
+requires = [ "nodejs-24" ]
+project_type = "web"
+template = "vite"
+version = "0.0.32"
+appliedPatches = [ ]
+
+[dev]
+build = [ "bash", "./scripts/prepare.sh" ]
+run = [ "bash", "./scripts/dev.sh" ]
+validate = [ "bash", "./scripts/validate.sh" ]
+deps = [ "git" ]
+
+[deploy]
+build = [ "bash", "./scripts/build.sh" ]
+run = [ "bash", "./scripts/start.sh" ]
+deps = [ "git" ]
