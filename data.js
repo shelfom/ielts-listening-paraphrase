@@ -11,39 +11,39 @@ export const COURSE = {
     { number: 4, title: "Ocean biodiversity" }
   ],
   drills: [
-    { id: "11-1-1-01", part: 1, question: "required", answer: "we do insist", distractor: "collected up" },
-    { id: "11-1-1-02", part: 1, question: "will need", answer: "have to see about getting", distractor: "no one fiddles about with" },
-    { id: "11-1-1-03", part: 1, question: "in advance", answer: "before", distractor: "let know" },
-    { id: "11-1-1-04", part: 1, question: "to arrange", answer: "to make the arrangements", distractor: "stacked up" },
-    { id: "11-1-1-05", part: 1, question: "don't touch", answer: "no one fiddles about with", distractor: "before" },
-    { id: "11-1-1-06", part: 1, question: "contact", answer: "let know", distractor: "have to see about getting" },
-    { id: "11-1-1-07", part: 1, question: "need to know", answer: "you'll be informed of", distractor: "to make the arrangements" },
-    { id: "11-1-1-08", part: 1, question: "placed", answer: "collected up", distractor: "we do insist" },
-    { id: "11-1-1-09", part: 1, question: "piled up", answer: "stacked up", distractor: "you'll be informed of" },
+    { id: "11-1-1-01", part: 1, question: "required", answer: "we do insist", distractor: "collected up", distractor2: "before" },
+    { id: "11-1-1-02", part: 1, question: "will need", answer: "have to see about getting", distractor: "no one fiddles about with", distractor2: "stacked up" },
+    { id: "11-1-1-03", part: 1, question: "in advance", answer: "before", distractor: "let know", distractor2: "collected up" },
+    { id: "11-1-1-04", part: 1, question: "to arrange", answer: "to make the arrangements", distractor: "stacked up", distractor2: "you'll be informed of" },
+    { id: "11-1-1-05", part: 1, question: "don't touch", answer: "no one fiddles about with", distractor: "before", distractor2: "have to see about getting" },
+    { id: "11-1-1-06", part: 1, question: "contact", answer: "let know", distractor: "have to see about getting", distractor2: "we do insist" },
+    { id: "11-1-1-07", part: 1, question: "need to know", answer: "you'll be informed of", distractor: "to make the arrangements", distractor2: "no one fiddles about with" },
+    { id: "11-1-1-08", part: 1, question: "placed", answer: "collected up", distractor: "we do insist", distractor2: "let know" },
+    { id: "11-1-1-09", part: 1, question: "piled up", answer: "stacked up", distractor: "you'll be informed of", distractor2: "to make the arrangements" },
 
-    { id: "11-1-2-01", part: 2, question: "advice", answer: "tips", distractor: "injure" },
-    { id: "11-1-2-02", part: 2, question: "harm", answer: "injure", distractor: "unless" },
-    { id: "11-1-2-03", part: 2, question: "exceptions", answer: "unless", distractor: "tips" },
+    { id: "11-1-2-01", part: 2, question: "advice", answer: "tips", distractor: "injure", distractor2: "unless" },
+    { id: "11-1-2-02", part: 2, question: "harm", answer: "injure", distractor: "unless", distractor2: "tips" },
+    { id: "11-1-2-03", part: 2, question: "exceptions", answer: "unless", distractor: "tips", distractor2: "injure" },
 
-    { id: "11-1-3-01", part: 3, question: "science, technology, engineering or mathematics", answer: "STEM disciplines", distractor: "got same results" },
-    { id: "11-1-3-02", part: 3, question: "way to improving", answer: "solution", distractor: "significant" },
-    { id: "11-1-3-03", part: 3, question: "investigate", answer: "find out", distractor: "get poor results" },
-    { id: "11-1-3-04", part: 3, question: "do badly", answer: "get poor results", distractor: "the idea of" },
-    { id: "11-1-3-05", part: 3, question: "important", answer: "significant", distractor: "hadn't expected" },
-    { id: "11-1-3-06", part: 3, question: "aim", answer: "the idea of", distractor: "STEM disciplines" },
-    { id: "11-1-3-07", part: 3, question: "surprised", answer: "hadn't expected", distractor: "solution" },
-    { id: "11-1-3-08", part: 3, question: "had no effect on", answer: "got same results", distractor: "find out" },
+    { id: "11-1-3-01", part: 3, question: "science, technology, engineering or mathematics", answer: "STEM disciplines", distractor: "got same results", distractor2: "solution" },
+    { id: "11-1-3-02", part: 3, question: "way to improving", answer: "solution", distractor: "significant", distractor2: "STEM disciplines" },
+    { id: "11-1-3-03", part: 3, question: "investigate", answer: "find out", distractor: "get poor results", distractor2: "the idea of" },
+    { id: "11-1-3-04", part: 3, question: "do badly", answer: "get poor results", distractor: "the idea of", distractor2: "find out" },
+    { id: "11-1-3-05", part: 3, question: "important", answer: "significant", distractor: "hadn't expected", distractor2: "got same results" },
+    { id: "11-1-3-06", part: 3, question: "aim", answer: "the idea of", distractor: "STEM disciplines", distractor2: "significant" },
+    { id: "11-1-3-07", part: 3, question: "surprised", answer: "hadn't expected", distractor: "solution", distractor2: "get poor results" },
+    { id: "11-1-3-08", part: 3, question: "had no effect on", answer: "got same results", distractor: "find out", distractor2: "hadn't expected" },
 
-    { id: "11-1-4-01", part: 4, question: "contain", answer: "have", distractor: "boundaries" },
-    { id: "11-1-4-02", part: 4, question: "many different", answer: "the greatest mixture of", distractor: "below" },
-    { id: "11-1-4-03", part: 4, question: "important", answer: "significant", distractor: "so that" },
-    { id: "11-1-4-04", part: 4, question: "sufficient", answer: "enough", distractor: "create" },
-    { id: "11-1-4-05", part: 4, question: "where meet", answer: "boundaries", distractor: "have" },
-    { id: "11-1-4-06", part: 4, question: "under", answer: "below", distractor: "the greatest mixture of" },
-    { id: "11-1-4-07", part: 4, question: "near", answer: "around", distractor: "significant" },
-    { id: "11-1-4-08", part: 4, question: "establish", answer: "create", distractor: "enough" },
-    { id: "11-1-4-09", part: 4, question: "reduce", answer: "lower", distractor: "around" },
-    { id: "11-1-4-10", part: 4, question: "purpose", answer: "so that", distractor: "lower" }
+    { id: "11-1-4-01", part: 4, question: "contain", answer: "have", distractor: "boundaries", distractor2: "below" },
+    { id: "11-1-4-02", part: 4, question: "many different", answer: "the greatest mixture of", distractor: "below", distractor2: "around" },
+    { id: "11-1-4-03", part: 4, question: "important", answer: "significant", distractor: "so that", distractor2: "have" },
+    { id: "11-1-4-04", part: 4, question: "sufficient", answer: "enough", distractor: "create", distractor2: "lower" },
+    { id: "11-1-4-05", part: 4, question: "where meet", answer: "boundaries", distractor: "have", distractor2: "enough" },
+    { id: "11-1-4-06", part: 4, question: "under", answer: "below", distractor: "the greatest mixture of", distractor2: "create" },
+    { id: "11-1-4-07", part: 4, question: "near", answer: "around", distractor: "significant", distractor2: "enough" },
+    { id: "11-1-4-08", part: 4, question: "establish", answer: "create", distractor: "enough", distractor2: "so that" },
+    { id: "11-1-4-09", part: 4, question: "reduce", answer: "lower", distractor: "around", distractor2: "boundaries" },
+    { id: "11-1-4-10", part: 4, question: "purpose", answer: "so that", distractor: "lower", distractor2: "significant" }
   ]
 };
 
@@ -62,6 +62,6 @@ export function audioPath(voice, text) {
   return `/audio/${voice}/${audioKey(text)}.mp3`;
 }
 
-export function correctIsLeft(index) {
-  return index % 4 === 0 || index % 4 === 3;
+export function correctPosition(index) {
+  return index % 3;
 }

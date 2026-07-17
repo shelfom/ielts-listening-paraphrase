@@ -38,28 +38,32 @@
         </div>
 
         <p class="instruction" id="instruction" aria-live="polite">
-          Listen to the question
+          Tap each card to listen
         </p>
 
         <section class="audio-stage" id="audioStage" aria-label="Listening drill">
-          <button class="audio-card question-card" id="questionCard" type="button">
-            <span class="card-status">
-              <span class="speaker" aria-hidden="true">
-                <svg viewBox="0 0 32 32" role="img">
-                  <path d="M6 13h5l6-5v16l-6-5H6z"></path>
-                  <path d="M21 12c2.7 2.1 2.7 5.9 0 8"></path>
-                  <path d="M24.5 8.5c5 4.1 5 10.9 0 15"></path>
-                </svg>
+          <article class="audio-card question-card" id="questionCard">
+            <div class="card-body">
+              <span class="card-status">
+                <span class="speaker" aria-hidden="true">
+                  <svg viewBox="0 0 32 32" role="img">
+                    <path d="M6 13h5l6-5v16l-6-5H6z"></path>
+                    <path d="M21 12c2.7 2.1 2.7 5.9 0 8"></path>
+                    <path d="M24.5 8.5c5 4.1 5 10.9 0 15"></path>
+                  </svg>
+                </span>
+                <span class="card-kicker">Word</span>
+                <span class="heard-mark" aria-hidden="true">heard</span>
               </span>
-              <span class="card-kicker">Question</span>
-              <span class="heard-mark" aria-hidden="true">heard</span>
-            </span>
-            <span class="term-text" id="questionText"></span>
-            <span class="tap-hint">tap to listen</span>
-          </button>
+              <span class="term-text question-text" id="questionText">required</span>
+            </div>
+            <div class="card-actions single-action">
+              <button class="listen-action" id="questionListen" type="button">Listen</button>
+            </div>
+          </article>
 
-          <div class="option-grid">
-            <button class="audio-card option-card" id="leftCard" type="button" disabled>
+          <article class="audio-card option-card" id="option0Card">
+            <div class="card-body">
               <span class="card-status">
                 <span class="speaker" aria-hidden="true">
                   <svg viewBox="0 0 32 32" role="img">
@@ -71,11 +75,17 @@
                 <span class="card-kicker">A</span>
                 <span class="heard-mark" aria-hidden="true">heard</span>
               </span>
-              <span class="term-text" id="leftText"></span>
-              <span class="tap-hint">tap to listen</span>
-            </button>
+              <span class="term-text" id="option0Text"></span>
+            </div>
+            <span class="result-icon" aria-hidden="true"></span>
+            <div class="card-actions">
+              <button class="listen-action" id="option0Listen" type="button">Listen</button>
+              <button class="choose-button" id="option0Choose" type="button" disabled>Choose</button>
+            </div>
+          </article>
 
-            <button class="audio-card option-card" id="rightCard" type="button" disabled>
+          <article class="audio-card option-card" id="option1Card">
+            <div class="card-body">
               <span class="card-status">
                 <span class="speaker" aria-hidden="true">
                   <svg viewBox="0 0 32 32" role="img">
@@ -87,10 +97,36 @@
                 <span class="card-kicker">B</span>
                 <span class="heard-mark" aria-hidden="true">heard</span>
               </span>
-              <span class="term-text" id="rightText"></span>
-              <span class="tap-hint">tap to listen</span>
-            </button>
-          </div>
+              <span class="term-text" id="option1Text"></span>
+            </div>
+            <span class="result-icon" aria-hidden="true"></span>
+            <div class="card-actions">
+              <button class="listen-action" id="option1Listen" type="button">Listen</button>
+              <button class="choose-button" id="option1Choose" type="button" disabled>Choose</button>
+            </div>
+          </article>
+
+          <article class="audio-card option-card" id="option2Card">
+            <div class="card-body">
+              <span class="card-status">
+                <span class="speaker" aria-hidden="true">
+                  <svg viewBox="0 0 32 32" role="img">
+                    <path d="M6 13h5l6-5v16l-6-5H6z"></path>
+                    <path d="M21 12c2.7 2.1 2.7 5.9 0 8"></path>
+                    <path d="M24.5 8.5c5 4.1 5 10.9 0 15"></path>
+                  </svg>
+                </span>
+                <span class="card-kicker">C</span>
+                <span class="heard-mark" aria-hidden="true">heard</span>
+              </span>
+              <span class="term-text" id="option2Text"></span>
+            </div>
+            <span class="result-icon" aria-hidden="true"></span>
+            <div class="card-actions">
+              <button class="listen-action" id="option2Listen" type="button">Listen</button>
+              <button class="choose-button" id="option2Choose" type="button" disabled>Choose</button>
+            </div>
+          </article>
         </section>
 
         <nav class="practice-nav" aria-label="Practice controls">

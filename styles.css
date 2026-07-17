@@ -183,11 +183,6 @@ h1 {
 
 .audio-stage {
   display: grid;
-  gap: clamp(14px, 2vw, 20px);
-}
-
-.option-grid {
-  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: clamp(14px, 2vw, 20px);
 }
@@ -195,12 +190,14 @@ h1 {
 .audio-card {
   position: relative;
   min-width: 0;
+  min-height: clamp(205px, 25vh, 255px);
   overflow: hidden;
   border: 1.5px solid var(--line);
-  border-radius: 3px;
+  border-radius: clamp(20px, 3vw, 30px);
   background: var(--surface);
-  box-shadow: clamp(4px, 0.8vw, 7px) clamp(5px, 0.9vw, 8px) 0 var(--shadow);
-  cursor: pointer;
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--shadow) 62%, transparent);
+  display: flex;
+  flex-direction: column;
   transition:
     transform 160ms ease,
     box-shadow 160ms ease,
@@ -209,30 +206,14 @@ h1 {
     opacity 160ms ease;
 }
 
-.question-card {
-  width: 72%;
-  min-height: clamp(118px, 17vh, 165px);
-  margin: 0 auto;
-  padding: clamp(20px, 3vw, 32px);
-}
-
-.option-card {
-  min-height: clamp(172px, 25vh, 246px);
-  padding: clamp(18px, 3vw, 30px);
-}
-
-.audio-card:not(:disabled):hover {
-  transform: translate(-2px, -2px);
-  box-shadow: clamp(6px, 1vw, 9px) clamp(7px, 1.1vw, 10px) 0 var(--shadow);
-}
-
-.audio-card:not(:disabled):active,
 .audio-card.is-playing {
-  transform: translate(4px, 4px);
-  box-shadow: 2px 2px 0 var(--shadow);
+  transform: translateY(-3px);
+  border-color: var(--accent);
+  box-shadow: 0 15px 36px color-mix(in srgb, var(--accent) 28%, transparent);
 }
 
-.audio-card:focus-visible,
+.listen-action:focus-visible,
+.choose-button:focus-visible,
 .text-button:focus-visible,
 .theme-button:focus-visible,
 .primary-button:focus-visible {
@@ -240,9 +221,13 @@ h1 {
   outline-offset: 4px;
 }
 
-.audio-card:disabled {
-  cursor: default;
-  opacity: 0.58;
+.card-body {
+  position: relative;
+  min-height: 0;
+  flex: 1;
+  padding: clamp(44px, 6vw, 62px) clamp(18px, 3vw, 30px) 22px;
+  display: grid;
+  place-items: center;
 }
 
 .card-status {
@@ -278,7 +263,6 @@ h1 {
 }
 
 .card-kicker,
-.tap-hint,
 .heard-mark {
   color: var(--muted);
   font-size: 0.66rem;
@@ -297,30 +281,6 @@ h1 {
   display: inline;
 }
 
-.tap-hint {
-  position: absolute;
-  right: clamp(15px, 2.4vw, 22px);
-  bottom: clamp(13px, 2vw, 18px);
-  font-size: 0.58rem;
-  opacity: 0.7;
-}
-
-.is-ready .tap-hint {
-  color: var(--accent);
-}
-
-.is-ready .tap-hint::after {
-  content: "choose";
-}
-
-.is-ready .tap-hint {
-  font-size: 0;
-}
-
-.is-ready .tap-hint::after {
-  font-size: 0.58rem;
-}
-
 .term-text {
   display: block;
   width: 100%;
@@ -334,6 +294,11 @@ h1 {
   transform: translateY(8px);
 }
 
+.question-card .term-text {
+  opacity: 1;
+  transform: none;
+}
+
 .option-card .term-text {
   font-size: clamp(1.12rem, 2.6vw, 1.95rem);
 }
@@ -344,9 +309,110 @@ h1 {
   transition: opacity 320ms ease, transform 320ms ease;
 }
 
-.is-revealed .tap-hint,
 .is-revealed .heard-mark {
   display: none;
+}
+
+.card-actions {
+  padding: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--line) 45%, transparent);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+}
+
+.card-actions.single-action {
+  grid-template-columns: 1fr;
+}
+
+.listen-action,
+.choose-button {
+  min-height: 42px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  transition:
+    color 150ms ease,
+    border-color 150ms ease,
+    background 150ms ease,
+    transform 150ms ease;
+}
+
+.listen-action:hover {
+  color: var(--ink);
+  border-color: var(--accent);
+}
+
+.listen-action:active,
+.choose-button:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+.choose-button {
+  color: var(--accent);
+}
+
+.choose-button:not(:disabled) {
+  color: var(--surface);
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.choose-button:disabled {
+  cursor: default;
+  opacity: 0.35;
+}
+
+.audio-card.is-ready {
+  border-color: color-mix(in srgb, var(--accent) 70%, var(--line));
+}
+
+.result-icon {
+  position: absolute;
+  z-index: 2;
+  top: 13px;
+  right: 14px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-family: var(--sans);
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.55);
+}
+
+.option-card.is-correct .result-icon {
+  opacity: 1;
+  background: var(--success);
+  transform: scale(1);
+  transition: opacity 180ms ease, transform 260ms cubic-bezier(0.2, 1.5, 0.35, 1);
+}
+
+.option-card.is-correct .result-icon::before {
+  content: "✓";
+}
+
+.audio-card.is-wrong .result-icon {
+  opacity: 1;
+  background: var(--danger);
+  transform: scale(1);
+  animation: result-pop 420ms cubic-bezier(0.2, 1.5, 0.35, 1);
+}
+
+.audio-card.is-wrong .result-icon::before {
+  content: "×";
 }
 
 .option-card.is-correct {
@@ -528,6 +594,16 @@ h1 {
   }
 }
 
+@keyframes result-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.35);
+  }
+  65% {
+    transform: scale(1.14);
+  }
+}
+
 @keyframes finish-in {
   from {
     opacity: 0;
@@ -557,21 +633,19 @@ h1 {
     margin-top: 2px;
   }
 
-  .question-card {
-    width: 88%;
-    min-height: clamp(108px, 16svh, 128px);
-    box-shadow: 4px 5px 0 var(--shadow);
-  }
-
+  .question-card,
   .option-card {
-    min-height: clamp(168px, 25svh, 214px);
-    padding-inline: 14px;
-    box-shadow: 4px 5px 0 var(--shadow);
+    min-height: clamp(188px, 23svh, 210px);
+    border-radius: 21px;
+    box-shadow: 0 9px 22px color-mix(in srgb, var(--shadow) 58%, transparent);
   }
 
-  .audio-stage,
-  .option-grid {
+  .audio-stage {
     gap: 12px;
+  }
+
+  .card-body {
+    padding: 42px 12px 12px;
   }
 
   .card-status {
@@ -584,17 +658,24 @@ h1 {
     height: 21px;
   }
 
-  .tap-hint {
-    right: 12px;
-    bottom: 11px;
-  }
-
   .term-text {
-    font-size: clamp(1.22rem, 6vw, 1.65rem);
+    font-size: clamp(1.05rem, 5.3vw, 1.48rem);
   }
 
   .option-card .term-text {
-    font-size: clamp(1rem, 4.75vw, 1.34rem);
+    font-size: clamp(0.92rem, 4.3vw, 1.22rem);
+  }
+
+  .card-actions {
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .listen-action,
+  .choose-button {
+    min-height: 38px;
+    font-size: 0.57rem;
+    letter-spacing: 0.08em;
   }
 
   .site-footer {
@@ -616,12 +697,9 @@ h1 {
     margin-block: 8px;
   }
 
-  .question-card {
-    min-height: 96px;
-  }
-
+  .question-card,
   .option-card {
-    min-height: 150px;
+    min-height: 164px;
   }
 
   .practice-nav {

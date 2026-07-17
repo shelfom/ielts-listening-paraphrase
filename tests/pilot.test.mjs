@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { COURSE, audioKey, correctIsLeft } from "../data.js";
+import { existsSync, statSync } from "node:fs";
+import { COURSE, audioKey, correctPosition } from "../data.js";
 
 test("pilot contains Cambridge 11 Test 1 from required to purpose", () => {
   assert.equal(COURSE.book, 11);
@@ -9,6 +10,7 @@ test("pilot contains Cambridge 11 Test 1 from required to purpose", () => {
   assert.equal(COURSE.drills[0].question, "required");
   assert.equal(COURSE.drills[0].answer, "we do insist");
   assert.equal(COURSE.drills[0].distractor, "collected up");
+  assert.equal(COURSE.drills[0].distractor2, "before");
   assert.equal(COURSE.drills.at(-1).question, "purpose");
   assert.equal(COURSE.drills.at(-1).answer, "so that");
 });
@@ -19,20 +21,24 @@ test("all four Parts have the workbook counts", () => {
   assert.deepEqual(Object.fromEntries(counts), { 1: 9, 2: 3, 3: 8, 4: 10 });
 });
 
-test("every distractor comes from an answer in the same Part", () => {
+test("both distractors come from answers in the same Part", () => {
   for (const drill of COURSE.drills) {
     const samePartAnswers = COURSE.drills
       .filter((candidate) => candidate.part === drill.part)
       .map((candidate) => candidate.answer);
     assert.ok(samePartAnswers.includes(drill.distractor), drill.id);
+    assert.ok(samePartAnswers.includes(drill.distractor2), drill.id);
     assert.notEqual(drill.answer, drill.distractor, drill.id);
+    assert.notEqual(drill.answer, drill.distractor2, drill.id);
+    assert.notEqual(drill.distractor, drill.distractor2, drill.id);
   }
 });
 
-test("answer positions are deterministic and perfectly balanced", () => {
-  const left = COURSE.drills.filter((_, index) => correctIsLeft(index)).length;
-  assert.equal(left, 15);
-  assert.equal(COURSE.drills.length - left, 15);
+test("three answer positions are deterministic and perfectly balanced", () => {
+  const positions = [0, 1, 2].map(
+    (position) => COURSE.drills.filter((_, index) => correctPosition(index) === position).length
+  );
+  assert.deepEqual(positions, [10, 10, 10]);
 });
 
 test("ids and audio keys are stable", () => {
@@ -45,4 +51,12 @@ test("ids and audio keys are stable", () => {
 test("Book 20 is supported by data, not hard-coded totals", () => {
   assert.equal(COURSE.futureBookReady, 20);
   assert.equal(COURSE.total, COURSE.drills.length);
+});
+
+test("correct and wrong game feedback sounds are bundled", () => {
+  for (const name of ["correct", "wrong"]) {
+    const file = new URL(`../public/sfx/${name}.mp3`, import.meta.url);
+    assert.ok(existsSync(file), `${name} sound is missing`);
+    assert.ok(statSync(file).size > 1000, `${name} sound is empty`);
+  }
 });

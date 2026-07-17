@@ -9,6 +9,7 @@ for (const drill of COURSE.drills) {
   expected.add(audioPath("female", drill.question));
   expected.add(audioPath("male", drill.answer));
   expected.add(audioPath("male", drill.distractor));
+  expected.add(audioPath("male", drill.distractor2));
 }
 
 const failures = [];

@@ -1,4 +1,4 @@
-const cacheName = "ielts-listening-pilot-v2";
+const cacheName = "ielts-listening-pilot-v3";
 const shell = ["/", "/index.html"];
 
 self.addEventListener("install", (event) => {
