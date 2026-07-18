@@ -8,6 +8,7 @@ const elements = {
   scoreLabel: $("scoreLabel"),
   progressFill: $("progressFill"),
   instruction: $("instruction"),
+  audioStage: $("audioStage"),
   questionCard: $("questionCard"),
   questionListen: $("questionListen"),
   questionText: $("questionText"),
@@ -37,6 +38,7 @@ const stored = readStoredState();
 const audioPool = new Map();
 let feedbackContext = null;
 let autoAdvanceTimer = null;
+let autoAdvanceFrame = null;
 const state = {
   testIndex: Math.min(Math.max(stored.testIndex ?? 0, 0), COURSE.tests.length - 1),
   drillIndex: 0,
@@ -105,21 +107,29 @@ function currentOptions() {
 }
 
 function clearAutoAdvance() {
-  if (autoAdvanceTimer === null) return;
-  window.clearTimeout(autoAdvanceTimer);
-  autoAdvanceTimer = null;
+  if (autoAdvanceFrame !== null) {
+    window.cancelAnimationFrame(autoAdvanceFrame);
+    autoAdvanceFrame = null;
+  }
+  if (autoAdvanceTimer !== null) {
+    window.clearTimeout(autoAdvanceTimer);
+    autoAdvanceTimer = null;
+  }
 }
 
 function scheduleAutoAdvance() {
   clearAutoAdvance();
   const testId = currentTest().id;
   const drillId = currentDrill().id;
-  autoAdvanceTimer = window.setTimeout(() => {
-    autoAdvanceTimer = null;
-    if (state.locked && currentTest().id === testId && currentDrill().id === drillId) {
-      nextDrill();
-    }
-  }, autoAdvanceDelay);
+  autoAdvanceFrame = window.requestAnimationFrame(() => {
+    autoAdvanceFrame = null;
+    autoAdvanceTimer = window.setTimeout(() => {
+      autoAdvanceTimer = null;
+      if (state.locked && currentTest().id === testId && currentDrill().id === drillId) {
+        nextDrill();
+      }
+    }, autoAdvanceDelay);
+  });
 }
 
 function completedCount(test = currentTest()) {
@@ -175,6 +185,17 @@ function revealTerm(element, text) {
   element.style.setProperty("opacity", "1", "important");
   element.style.setProperty("visibility", "visible", "important");
   element.style.setProperty("transform", "translateY(0)", "important");
+}
+
+function revealAllTerms(drill, options) {
+  elements.audioStage.dataset.termsVisible = "true";
+  revealTerm(elements.questionText, drill.question);
+  elements.questionCard.classList.add("is-revealed");
+  elements.options.forEach(({ card, text }, index) => {
+    revealTerm(text, options[index].text);
+    card.classList.add("is-revealed");
+  });
+  void elements.questionText.offsetWidth;
 }
 
 function playFeedbackFallback(kind) {
@@ -293,6 +314,7 @@ function revealAnswer(selectedIndex, withFeedback = true) {
   const firstChoice = !state.locked;
 
   clearAutoAdvance();
+  revealAllTerms(drill, options);
   if (firstChoice) {
     stopAudio();
     state.locked = true;
@@ -305,13 +327,9 @@ function revealAnswer(selectedIndex, withFeedback = true) {
     saveState();
   }
   if (withFeedback) playFeedback(selected.correct ? "correct" : "wrong");
-  revealTerm(elements.questionText, drill.question);
-  elements.questionCard.classList.add("is-revealed");
   elements.questionListen.setAttribute("aria-label", `Listen to the word: ${drill.question}`);
 
   elements.options.forEach(({ card, choose, text, listen }, index) => {
-    revealTerm(text, options[index].text);
-    card.classList.add("is-revealed");
     card.classList.toggle("is-correct", index === selectedIndex && selected.correct);
     card.classList.toggle("is-wrong", index === selectedIndex && !selected.correct);
     card.classList.toggle("is-distractor", index !== selectedIndex);
@@ -380,6 +398,7 @@ function render() {
   state.locked = false;
   state.firstTry = true;
   state.lastFeedback = null;
+  elements.audioStage.dataset.termsVisible = "false";
   clearCardState(elements.questionCard);
   elements.options.forEach(({ card, choose, text, listen }, index) => {
     clearCardState(card);
@@ -512,7 +531,7 @@ render();
 
 if ("serviceWorker" in navigator) {
   if (import.meta.env.PROD) {
-    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?release=v13"));
+    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?release=v14"));
   } else {
     navigator.serviceWorker
       .getRegistrations()
@@ -527,5 +546,14 @@ window.__IELTS_LISTENING_APP__ = {
   currentTest,
   currentDrill,
   feedbackState: () => ({ kind: state.lastFeedback, context: feedbackContext?.state ?? "fallback" }),
-  autoAdvanceState: () => ({ pending: autoAdvanceTimer !== null, delay: autoAdvanceDelay })
+  visibilityState: () => ({
+    allVisible:
+      elements.audioStage.dataset.termsVisible === "true" &&
+      !elements.questionText.hidden &&
+      elements.options.every(({ text }) => !text.hidden)
+  }),
+  autoAdvanceState: () => ({
+    pending: autoAdvanceFrame !== null || autoAdvanceTimer !== null,
+    delay: autoAdvanceDelay
+  })
 };

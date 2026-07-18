@@ -116,16 +116,20 @@ test("all four English phrases stay hidden until choice and Choose remains activ
   assert.match(app, /function revealTerm\(element, text\) \{[\s\S]*element\.hidden = false;[\s\S]*display", "block", "important"[\s\S]*opacity", "1", "important"[\s\S]*visibility", "visible", "important"/);
   assert.match(styles, /\.term-text\[hidden\] \{[\s\S]*display: none !important;/);
   assert.match(app, /revealTerm\(elements\.questionText, drill\.question\);/);
+  assert.match(app, /function revealAllTerms\(drill, options\) \{[\s\S]*elements\.audioStage\.dataset\.termsVisible = "true";[\s\S]*revealTerm\(elements\.questionText, drill\.question\);[\s\S]*void elements\.questionText\.offsetWidth;/);
+  assert.match(app, /clearAutoAdvance\(\);\s*revealAllTerms\(drill, options\);/);
   assert.match(app, /card\.classList\.toggle\("is-correct", index === selectedIndex && selected\.correct\)/);
   assert.match(app, /card\.classList\.toggle\("is-wrong", index === selectedIndex && !selected\.correct\)/);
   assert.match(app, /card\.classList\.toggle\("is-distractor", index !== selectedIndex\)/);
   assert.match(app, /revealTerm\(text, options\[index\]\.text\);/);
   assert.match(styles, /\.is-revealed \.term-text \{[\s\S]*transition: none;/);
+  assert.match(styles, /\.audio-stage\[data-terms-visible="true"\] \.term-text,[\s\S]*display: block !important;[\s\S]*opacity: 1 !important;[\s\S]*visibility: visible !important;/);
+  assert.match(styles, /\.question-card \.card-actions\.single-action \{\s*position: relative;/);
   assert.doesNotMatch(app, /choose\.disabled = true/);
   assert.doesNotMatch(app, /revealAnswer\(correctPosition\(state\.drillIndex\), false\)/);
   assert.match(app, /elements\.questionListen\.setAttribute\("aria-label", "Listen to tested word"\)/);
-  assert.match(worker, /const cacheName = "ielts-listening-books-11-19-v13";/);
-  assert.match(app, /navigator\.serviceWorker\.register\("\/sw\.js\?release=v13"\)/);
+  assert.match(worker, /const cacheName = "ielts-listening-books-11-19-v14";/);
+  assert.match(app, /navigator\.serviceWorker\.register\("\/sw\.js\?release=v14"\)/);
 });
 
 test("correct and wrong feedback use distinct immediate bell cues", () => {
@@ -143,11 +147,12 @@ test("a correct choice auto-advances after the reveal while Next remains functio
   const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
   assert.match(app, /const autoAdvanceDelay = 900;/);
   assert.match(app, /function scheduleAutoAdvance\(\)/);
-  assert.match(app, /autoAdvanceTimer = window\.setTimeout\([\s\S]*nextDrill\(\);[\s\S]*autoAdvanceDelay/);
+  assert.match(app, /autoAdvanceFrame = window\.requestAnimationFrame\(\(\) => \{[\s\S]*autoAdvanceTimer = window\.setTimeout\([\s\S]*nextDrill\(\);[\s\S]*autoAdvanceDelay/);
   assert.match(app, /if \(selected\.correct\) scheduleAutoAdvance\(\);/);
   assert.match(app, /function nextDrill\(\) \{\s*clearAutoAdvance\(\);/);
   assert.match(app, /elements\.nextButton\.addEventListener\("click", nextDrill\)/);
-  assert.match(app, /autoAdvanceState: \(\) => \(\{ pending: autoAdvanceTimer !== null, delay: autoAdvanceDelay \}\)/);
+  assert.match(app, /visibilityState: \(\) => \(\{[\s\S]*allVisible:/);
+  assert.match(app, /pending: autoAdvanceFrame !== null \|\| autoAdvanceTimer !== null/);
 });
 
 test("current and following drill audio are held in a persistent preload pool", () => {
@@ -172,7 +177,7 @@ test("Back and Next sit below the listening cards", () => {
 
 test("the word Listen control sits in the same lower-right choice row", () => {
   const styles = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
-  assert.match(styles, /\.question-card \.card-actions\.single-action \{[\s\S]*inset: auto 0 0;[\s\S]*grid-template-rows: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(styles, /\.question-card \.card-actions\.single-action \{[\s\S]*position: relative;[\s\S]*grid-template-rows: repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(styles, /\.question-card \.listen-action \{[\s\S]*grid-row: 1;[\s\S]*width: min\(48%, 210px\)/);
   assert.match(styles, /\.option-card \.card-actions \{[\s\S]*grid-template-rows: repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(styles, /\.option-card \.listen-action \{[\s\S]*grid-row: 1/);
