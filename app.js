@@ -33,12 +33,9 @@ const elements = {
 };
 
 const storageKey = "ielts-listening-paraphrase-v3";
-const autoAdvanceDelay = 900;
 const stored = readStoredState();
 const audioPool = new Map();
 let feedbackContext = null;
-let autoAdvanceTimer = null;
-let autoAdvanceFrame = null;
 const state = {
   testIndex: Math.min(Math.max(stored.testIndex ?? 0, 0), COURSE.tests.length - 1),
   drillIndex: 0,
@@ -104,32 +101,6 @@ function currentOptions() {
   const options = distractors.map((text) => ({ text, correct: false }));
   options.splice(correctPosition(state.drillIndex), 0, { text: drill.answer, correct: true });
   return options;
-}
-
-function clearAutoAdvance() {
-  if (autoAdvanceFrame !== null) {
-    window.cancelAnimationFrame(autoAdvanceFrame);
-    autoAdvanceFrame = null;
-  }
-  if (autoAdvanceTimer !== null) {
-    window.clearTimeout(autoAdvanceTimer);
-    autoAdvanceTimer = null;
-  }
-}
-
-function scheduleAutoAdvance() {
-  clearAutoAdvance();
-  const testId = currentTest().id;
-  const drillId = currentDrill().id;
-  autoAdvanceFrame = window.requestAnimationFrame(() => {
-    autoAdvanceFrame = null;
-    autoAdvanceTimer = window.setTimeout(() => {
-      autoAdvanceTimer = null;
-      if (state.locked && currentTest().id === testId && currentDrill().id === drillId) {
-        nextDrill();
-      }
-    }, autoAdvanceDelay);
-  });
 }
 
 function completedCount(test = currentTest()) {
@@ -313,7 +284,6 @@ function revealAnswer(selectedIndex, withFeedback = true) {
   const drill = currentDrill();
   const firstChoice = !state.locked;
 
-  clearAutoAdvance();
   revealAllTerms(drill, options);
   if (firstChoice) {
     stopAudio();
@@ -342,7 +312,6 @@ function revealAnswer(selectedIndex, withFeedback = true) {
   setInstruction(selected.correct ? "Correct" : "Not quite", selected.correct ? "correct" : "wrong");
   updateProgress();
   navigator.vibrate?.(selected.correct ? 14 : [40, 35, 40]);
-  if (selected.correct) scheduleAutoAdvance();
 }
 
 function updateProgress() {
@@ -388,7 +357,6 @@ function preloadCurrentAndNext() {
 }
 
 function render() {
-  clearAutoAdvance();
   stopAudio();
   const drill = currentDrill();
   const part = currentPart();
@@ -438,7 +406,6 @@ function showFinishScreen() {
 }
 
 function nextDrill() {
-  clearAutoAdvance();
   if (!state.locked) return;
   if (state.drillIndex === currentTest().drills.length - 1) {
     showFinishScreen();
@@ -449,7 +416,6 @@ function nextDrill() {
 }
 
 function previousDrill() {
-  clearAutoAdvance();
   if (state.drillIndex > 0) {
     state.drillIndex -= 1;
     render();
@@ -463,7 +429,6 @@ function previousDrill() {
 }
 
 function restartCurrentTest() {
-  clearAutoAdvance();
   stopAudio();
   currentTest().drills.forEach((drill) => delete state.results[drill.id]);
   state.drillIndex = 0;
@@ -472,7 +437,6 @@ function restartCurrentTest() {
 }
 
 function continueAfterFinish() {
-  clearAutoAdvance();
   const nextTest = COURSE.tests[state.testIndex + 1];
   if (!nextTest) {
     stopAudio();
@@ -531,7 +495,7 @@ render();
 
 if ("serviceWorker" in navigator) {
   if (import.meta.env.PROD) {
-    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?release=v14"));
+    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?release=v15"));
   } else {
     navigator.serviceWorker
       .getRegistrations()
@@ -551,9 +515,5 @@ window.__IELTS_LISTENING_APP__ = {
       elements.audioStage.dataset.termsVisible === "true" &&
       !elements.questionText.hidden &&
       elements.options.every(({ text }) => !text.hidden)
-  }),
-  autoAdvanceState: () => ({
-    pending: autoAdvanceFrame !== null || autoAdvanceTimer !== null,
-    delay: autoAdvanceDelay
   })
 };

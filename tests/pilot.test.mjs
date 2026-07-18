@@ -117,7 +117,7 @@ test("all four English phrases stay hidden until choice and Choose remains activ
   assert.match(styles, /\.term-text\[hidden\] \{[\s\S]*display: none !important;/);
   assert.match(app, /revealTerm\(elements\.questionText, drill\.question\);/);
   assert.match(app, /function revealAllTerms\(drill, options\) \{[\s\S]*elements\.audioStage\.dataset\.termsVisible = "true";[\s\S]*revealTerm\(elements\.questionText, drill\.question\);[\s\S]*void elements\.questionText\.offsetWidth;/);
-  assert.match(app, /clearAutoAdvance\(\);\s*revealAllTerms\(drill, options\);/);
+  assert.match(app, /const firstChoice = !state\.locked;\s*revealAllTerms\(drill, options\);/);
   assert.match(app, /card\.classList\.toggle\("is-correct", index === selectedIndex && selected\.correct\)/);
   assert.match(app, /card\.classList\.toggle\("is-wrong", index === selectedIndex && !selected\.correct\)/);
   assert.match(app, /card\.classList\.toggle\("is-distractor", index !== selectedIndex\)/);
@@ -128,8 +128,8 @@ test("all four English phrases stay hidden until choice and Choose remains activ
   assert.doesNotMatch(app, /choose\.disabled = true/);
   assert.doesNotMatch(app, /revealAnswer\(correctPosition\(state\.drillIndex\), false\)/);
   assert.match(app, /elements\.questionListen\.setAttribute\("aria-label", "Listen to tested word"\)/);
-  assert.match(worker, /const cacheName = "ielts-listening-books-11-19-v14";/);
-  assert.match(app, /navigator\.serviceWorker\.register\("\/sw\.js\?release=v14"\)/);
+  assert.match(worker, /const cacheName = "ielts-listening-books-11-19-v15";/);
+  assert.match(app, /navigator\.serviceWorker\.register\("\/sw\.js\?release=v15"\)/);
 });
 
 test("correct and wrong feedback use distinct immediate bell cues", () => {
@@ -143,16 +143,15 @@ test("correct and wrong feedback use distinct immediate bell cues", () => {
   assert.match(app, /playFeedbackFallback\(kind\)/);
 });
 
-test("a correct choice auto-advances after the reveal while Next remains functional", () => {
+test("a correct choice stays visible until the learner clicks Next", () => {
   const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
-  assert.match(app, /const autoAdvanceDelay = 900;/);
-  assert.match(app, /function scheduleAutoAdvance\(\)/);
-  assert.match(app, /autoAdvanceFrame = window\.requestAnimationFrame\(\(\) => \{[\s\S]*autoAdvanceTimer = window\.setTimeout\([\s\S]*nextDrill\(\);[\s\S]*autoAdvanceDelay/);
-  assert.match(app, /if \(selected\.correct\) scheduleAutoAdvance\(\);/);
-  assert.match(app, /function nextDrill\(\) \{\s*clearAutoAdvance\(\);/);
+  assert.doesNotMatch(app, /autoAdvance/);
+  assert.doesNotMatch(app, /scheduleAutoAdvance/);
+  assert.doesNotMatch(app, /window\.setTimeout/);
+  assert.doesNotMatch(app, /window\.requestAnimationFrame/);
+  assert.match(app, /function nextDrill\(\) \{\s*if \(!state\.locked\) return;/);
   assert.match(app, /elements\.nextButton\.addEventListener\("click", nextDrill\)/);
   assert.match(app, /visibilityState: \(\) => \(\{[\s\S]*allVisible:/);
-  assert.match(app, /pending: autoAdvanceFrame !== null \|\| autoAdvanceTimer !== null/);
 });
 
 test("current and following drill audio are held in a persistent preload pool", () => {
