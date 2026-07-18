@@ -331,11 +331,6 @@ h1 {
   transform: translateY(8px);
 }
 
-.question-card .term-text {
-  opacity: 1;
-  transform: none;
-}
-
 .option-card .term-text {
   font-size: clamp(1.12rem, 2.6vw, 1.95rem);
 }
@@ -457,8 +452,11 @@ h1 {
 }
 
 .choose-button:disabled {
-  cursor: default;
-  opacity: 0.35;
+  cursor: pointer;
+  opacity: 1;
+  color: var(--surface);
+  border-color: var(--accent);
+  background: var(--accent);
 }
 
 .audio-card.is-ready {

@@ -34,6 +34,7 @@ const elements = {
 const storageKey = "ielts-listening-paraphrase-v3";
 const stored = readStoredState();
 const audioPool = new Map();
+let feedbackContext = null;
 const state = {
   testIndex: Math.min(Math.max(stored.testIndex ?? 0, 0), COURSE.tests.length - 1),
   drillIndex: 0,
@@ -41,6 +42,7 @@ const state = {
   heard: { question: false, options: [false, false, false] },
   locked: false,
   firstTry: true,
+  lastFeedback: null,
   activeAudio: null,
   activeCard: null
 };
@@ -137,11 +139,60 @@ function setInstruction(message, tone = "") {
   elements.instruction.dataset.tone = tone;
 }
 
-function playFeedback(kind) {
+function playFeedbackFallback(kind) {
   const sound = feedbackSounds[kind];
   sound.pause();
   sound.currentTime = 0;
+  sound.volume = 1;
   sound.play().catch(() => {});
+}
+
+function playFeedback(kind) {
+  state.lastFeedback = kind;
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) {
+    playFeedbackFallback(kind);
+    return;
+  }
+
+  try {
+    feedbackContext ??= new AudioContextClass();
+    if (feedbackContext.state === "suspended") feedbackContext.resume().catch(() => {});
+
+    const start = feedbackContext.currentTime + 0.006;
+    const correct = kind === "correct";
+    const tones = correct
+      ? [
+          { frequency: 659.25, delay: 0, duration: 0.16 },
+          { frequency: 987.77, delay: 0.11, duration: 0.3 }
+        ]
+      : [
+          { frequency: 220, delay: 0, duration: 0.15 },
+          { frequency: 138.59, delay: 0.12, duration: 0.3 }
+        ];
+    const master = feedbackContext.createGain();
+    master.gain.setValueAtTime(correct ? 0.42 : 0.34, start);
+    master.gain.exponentialRampToValueAtTime(0.0001, start + 0.46);
+    master.connect(feedbackContext.destination);
+
+    tones.forEach(({ frequency, delay, duration }) => {
+      const oscillator = feedbackContext.createOscillator();
+      const envelope = feedbackContext.createGain();
+      const toneStart = start + delay;
+      oscillator.type = correct ? "sine" : "square";
+      oscillator.frequency.setValueAtTime(frequency, toneStart);
+      if (!correct) oscillator.frequency.exponentialRampToValueAtTime(frequency * 0.82, toneStart + duration);
+      envelope.gain.setValueAtTime(0.0001, toneStart);
+      envelope.gain.exponentialRampToValueAtTime(1, toneStart + 0.018);
+      envelope.gain.exponentialRampToValueAtTime(0.0001, toneStart + duration);
+      oscillator.connect(envelope);
+      envelope.connect(master);
+      oscillator.start(toneStart);
+      oscillator.stop(toneStart + duration + 0.02);
+    });
+  } catch {
+    playFeedbackFallback(kind);
+  }
 }
 
 async function playClip(card, src, onFinished) {
@@ -181,7 +232,7 @@ async function playClip(card, src, onFinished) {
 function updateChoiceState() {
   const ready = !state.locked;
   elements.options.forEach(({ card, choose }) => {
-    choose.disabled = state.locked;
+    choose.disabled = false;
     card.classList.toggle("is-ready", ready);
   });
 
@@ -191,10 +242,17 @@ function updateChoiceState() {
 }
 
 function revealAnswer(selectedIndex, withFeedback = true) {
-  if (state.locked) return;
-  const drill = currentDrill();
   const options = currentOptions();
   const selected = options[selectedIndex];
+
+  if (state.locked) {
+    if (withFeedback) playFeedback(selected.correct ? "correct" : "wrong");
+    setInstruction(selected.correct ? "Correct" : "Not quite", selected.correct ? "correct" : "wrong");
+    navigator.vibrate?.(selected.correct ? 14 : [40, 35, 40]);
+    return;
+  }
+
+  const drill = currentDrill();
 
   stopAudio();
   if (withFeedback) playFeedback(selected.correct ? "correct" : "wrong");
@@ -206,6 +264,7 @@ function revealAnswer(selectedIndex, withFeedback = true) {
     firstTryCorrect: selected.correct
   };
   saveState();
+  elements.questionCard.classList.add("is-revealed");
 
   elements.options.forEach(({ card, choose, text, listen }, index) => {
     text.textContent = options[index].text;
@@ -213,7 +272,7 @@ function revealAnswer(selectedIndex, withFeedback = true) {
     card.classList.toggle("is-correct", options[index].correct);
     card.classList.toggle("is-wrong", index === selectedIndex && !selected.correct);
     card.classList.toggle("is-distractor", !options[index].correct && index !== selectedIndex);
-    choose.disabled = true;
+    choose.disabled = false;
     listen.setAttribute("aria-label", `Listen to option ${optionLetters[index]}: ${options[index].text}`);
     choose.setAttribute("aria-label", `Option ${optionLetters[index]}: ${options[index].text}`);
   });
@@ -411,7 +470,7 @@ render();
 
 if ("serviceWorker" in navigator) {
   if (import.meta.env.PROD) {
-    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?release=v9"));
+    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?release=v10"));
   } else {
     navigator.serviceWorker
       .getRegistrations()
@@ -424,5 +483,6 @@ window.__IELTS_LISTENING_APP__ = {
   state,
   currentOptions,
   currentTest,
-  currentDrill
+  currentDrill,
+  feedbackState: () => ({ kind: state.lastFeedback, context: feedbackContext?.state ?? "fallback" })
 };
