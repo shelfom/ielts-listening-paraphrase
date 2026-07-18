@@ -100,10 +100,12 @@ test("Choose is available immediately and does not require listening first", () 
 
 test("Choose controls stay above card layers and use direct touch hit testing", () => {
   const styles = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
+  const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
   const worker = readFileSync(new URL("../public/sw.js", import.meta.url), "utf8");
   assert.match(styles, /\.option-card \.card-actions \{[\s\S]*position: relative;[\s\S]*z-index: 4;/);
   assert.match(styles, /\.option-card \.listen-action,[\s\S]*\.option-card \.choose-button \{[\s\S]*position: relative;[\s\S]*z-index: 5;[\s\S]*touch-action: manipulation;/);
   assert.match(worker, /const cacheName = "ielts-listening-books-11-19-v8";/);
+  assert.match(app, /navigator\.serviceWorker\.register\("\/sw\.js\?release=v8"\)/);
 });
 
 test("current and following drill audio are held in a persistent preload pool", () => {
