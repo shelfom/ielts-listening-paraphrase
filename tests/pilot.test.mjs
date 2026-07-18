@@ -98,14 +98,17 @@ test("Choose is available immediately and does not require listening first", () 
   assert.doesNotMatch(app, /!allClipsHeard\(\)/);
 });
 
-test("Choose controls stay above card layers and use direct touch hit testing", () => {
+test("Choose controls stay above card layers, start active, and reveal on the first selection", () => {
   const styles = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
   const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
   const worker = readFileSync(new URL("../public/sw.js", import.meta.url), "utf8");
   assert.match(styles, /\.option-card \.card-actions \{[\s\S]*position: relative;[\s\S]*z-index: 4;/);
   assert.match(styles, /\.option-card \.listen-action,[\s\S]*\.option-card \.choose-button \{[\s\S]*position: relative;[\s\S]*z-index: 5;[\s\S]*touch-action: manipulation;/);
-  assert.match(worker, /const cacheName = "ielts-listening-books-11-19-v8";/);
-  assert.match(app, /navigator\.serviceWorker\.register\("\/sw\.js\?release=v8"\)/);
+  assert.doesNotMatch(app, /setInstruction\("Try again"/);
+  assert.match(app, /card\.classList\.toggle\("is-wrong", index === selectedIndex && !selected\.correct\)/);
+  assert.match(app, /text\.textContent = options\[index\]\.text;/);
+  assert.match(worker, /const cacheName = "ielts-listening-books-11-19-v9";/);
+  assert.match(app, /navigator\.serviceWorker\.register\("\/sw\.js\?release=v9"\)/);
 });
 
 test("current and following drill audio are held in a persistent preload pool", () => {
@@ -125,9 +128,10 @@ test("Back and Next sit below the listening cards", () => {
   assert.match(html, /class="text-button next-button"/);
 });
 
-test("Listen controls are docked on the right, immediately above Choose", () => {
+test("the word Listen control sits in the same lower-right choice row", () => {
   const styles = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
-  assert.match(styles, /\.question-card \.card-actions\.single-action \{[\s\S]*right:/);
+  assert.match(styles, /\.question-card \.card-actions\.single-action \{[\s\S]*inset: auto 0 0;[\s\S]*grid-template-rows: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(styles, /\.question-card \.listen-action \{[\s\S]*grid-row: 1;[\s\S]*width: min\(48%, 210px\)/);
   assert.match(styles, /\.option-card \.card-actions \{[\s\S]*grid-template-rows: repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(styles, /\.option-card \.listen-action \{[\s\S]*grid-row: 1/);
   assert.match(styles, /\.option-card \.choose-button \{[\s\S]*grid-row: 2/);

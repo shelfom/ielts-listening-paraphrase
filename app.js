@@ -196,28 +196,14 @@ function revealAnswer(selectedIndex, withFeedback = true) {
   const options = currentOptions();
   const selected = options[selectedIndex];
 
-  if (!selected.correct) {
-    state.firstTry = false;
-    if (withFeedback) playFeedback("wrong");
-    const card = elements.options[selectedIndex].card;
-    card.classList.remove("is-wrong");
-    void card.offsetWidth;
-    card.classList.add("is-wrong");
-    setInstruction("Try again", "wrong");
-    window.setTimeout(() => {
-      card.classList.remove("is-wrong");
-      if (!state.locked) setInstruction("Choose when ready", "ready");
-    }, 520);
-    return;
-  }
-
   stopAudio();
-  if (withFeedback) playFeedback("correct");
+  if (withFeedback) playFeedback(selected.correct ? "correct" : "wrong");
   state.locked = true;
+  state.firstTry = selected.correct;
   const previousResult = state.results[drill.id];
   state.results[drill.id] = previousResult ?? {
     completed: true,
-    firstTryCorrect: state.firstTry
+    firstTryCorrect: selected.correct
   };
   saveState();
 
@@ -225,16 +211,17 @@ function revealAnswer(selectedIndex, withFeedback = true) {
     text.textContent = options[index].text;
     card.classList.add("is-revealed");
     card.classList.toggle("is-correct", options[index].correct);
-    card.classList.toggle("is-distractor", !options[index].correct);
+    card.classList.toggle("is-wrong", index === selectedIndex && !selected.correct);
+    card.classList.toggle("is-distractor", !options[index].correct && index !== selectedIndex);
     choose.disabled = true;
     listen.setAttribute("aria-label", `Listen to option ${optionLetters[index]}: ${options[index].text}`);
     choose.setAttribute("aria-label", `Option ${optionLetters[index]}: ${options[index].text}`);
   });
 
   elements.nextButton.disabled = false;
-  setInstruction("Correct", "correct");
+  setInstruction(selected.correct ? "Correct" : "Not quite", selected.correct ? "correct" : "wrong");
   updateProgress();
-  navigator.vibrate?.(14);
+  navigator.vibrate?.(selected.correct ? 14 : [40, 35, 40]);
 }
 
 function updateProgress() {
@@ -424,7 +411,7 @@ render();
 
 if ("serviceWorker" in navigator) {
   if (import.meta.env.PROD) {
-    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?release=v8"));
+    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?release=v9"));
   } else {
     navigator.serviceWorker
       .getRegistrations()
