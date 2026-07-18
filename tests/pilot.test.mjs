@@ -104,6 +104,7 @@ test("all four English phrases stay hidden until choice and Choose remains activ
   const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
   const worker = readFileSync(new URL("../public/sw.js", import.meta.url), "utf8");
   assert.doesNotMatch(html, /class="heard-mark"/);
+  assert.equal((html.match(/class="term-text(?: question-text)?"[^>]* hidden/g) || []).length, 4);
   assert.match(styles, /\.option-card \.card-actions \{[\s\S]*position: relative;[\s\S]*z-index: 4;/);
   assert.match(styles, /\.option-card \.listen-action,[\s\S]*\.option-card \.choose-button \{[\s\S]*position: relative;[\s\S]*z-index: 5;[\s\S]*touch-action: manipulation;/);
   assert.doesNotMatch(app, /setInstruction\("Try again"/);
@@ -111,16 +112,20 @@ test("all four English phrases stay hidden until choice and Choose remains activ
   assert.match(styles, /\.term-text \{[\s\S]*opacity: 0;[\s\S]*visibility: hidden;/);
   assert.match(app, /elements\.questionCard\.classList\.add\("is-revealed"\)/);
   assert.match(styles, /\.question-card\.is-revealed \.question-text \{[\s\S]*opacity: 1;[\s\S]*visibility: visible;/);
-  assert.match(app, /elements\.questionText\.textContent = drill\.question;/);
+  assert.match(app, /function concealTerm\(element, text = ""\) \{[\s\S]*display", "none", "important"[\s\S]*element\.hidden = true;/);
+  assert.match(app, /function revealTerm\(element, text\) \{[\s\S]*element\.hidden = false;[\s\S]*display", "block", "important"[\s\S]*opacity", "1", "important"[\s\S]*visibility", "visible", "important"/);
+  assert.match(styles, /\.term-text\[hidden\] \{[\s\S]*display: none !important;/);
+  assert.match(app, /revealTerm\(elements\.questionText, drill\.question\);/);
   assert.match(app, /card\.classList\.toggle\("is-correct", index === selectedIndex && selected\.correct\)/);
   assert.match(app, /card\.classList\.toggle\("is-wrong", index === selectedIndex && !selected\.correct\)/);
   assert.match(app, /card\.classList\.toggle\("is-distractor", index !== selectedIndex\)/);
-  assert.match(app, /text\.textContent = options\[index\]\.text;/);
+  assert.match(app, /revealTerm\(text, options\[index\]\.text\);/);
+  assert.match(styles, /\.is-revealed \.term-text \{[\s\S]*transition: none;/);
   assert.doesNotMatch(app, /choose\.disabled = true/);
   assert.doesNotMatch(app, /revealAnswer\(correctPosition\(state\.drillIndex\), false\)/);
   assert.match(app, /elements\.questionListen\.setAttribute\("aria-label", "Listen to tested word"\)/);
-  assert.match(worker, /const cacheName = "ielts-listening-books-11-19-v12";/);
-  assert.match(app, /navigator\.serviceWorker\.register\("\/sw\.js\?release=v12"\)/);
+  assert.match(worker, /const cacheName = "ielts-listening-books-11-19-v13";/);
+  assert.match(app, /navigator\.serviceWorker\.register\("\/sw\.js\?release=v13"\)/);
 });
 
 test("correct and wrong feedback use distinct immediate bell cues", () => {
@@ -136,7 +141,7 @@ test("correct and wrong feedback use distinct immediate bell cues", () => {
 
 test("a correct choice auto-advances after the reveal while Next remains functional", () => {
   const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
-  assert.match(app, /const autoAdvanceDelay = 2400;/);
+  assert.match(app, /const autoAdvanceDelay = 900;/);
   assert.match(app, /function scheduleAutoAdvance\(\)/);
   assert.match(app, /autoAdvanceTimer = window\.setTimeout\([\s\S]*nextDrill\(\);[\s\S]*autoAdvanceDelay/);
   assert.match(app, /if \(selected\.correct\) scheduleAutoAdvance\(\);/);

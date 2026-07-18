@@ -32,7 +32,7 @@ const elements = {
 };
 
 const storageKey = "ielts-listening-paraphrase-v3";
-const autoAdvanceDelay = 2400;
+const autoAdvanceDelay = 900;
 const stored = readStoredState();
 const audioPool = new Map();
 let feedbackContext = null;
@@ -157,6 +157,24 @@ function stopAudio() {
 function setInstruction(message, tone = "") {
   elements.instruction.textContent = message;
   elements.instruction.dataset.tone = tone;
+}
+
+function concealTerm(element, text = "") {
+  element.textContent = text;
+  element.style.setProperty("display", "none", "important");
+  element.style.removeProperty("opacity");
+  element.style.removeProperty("visibility");
+  element.style.removeProperty("transform");
+  element.hidden = true;
+}
+
+function revealTerm(element, text) {
+  element.textContent = text;
+  element.hidden = false;
+  element.style.setProperty("display", "block", "important");
+  element.style.setProperty("opacity", "1", "important");
+  element.style.setProperty("visibility", "visible", "important");
+  element.style.setProperty("transform", "translateY(0)", "important");
 }
 
 function playFeedbackFallback(kind) {
@@ -287,12 +305,12 @@ function revealAnswer(selectedIndex, withFeedback = true) {
     saveState();
   }
   if (withFeedback) playFeedback(selected.correct ? "correct" : "wrong");
-  elements.questionText.textContent = drill.question;
+  revealTerm(elements.questionText, drill.question);
   elements.questionCard.classList.add("is-revealed");
   elements.questionListen.setAttribute("aria-label", `Listen to the word: ${drill.question}`);
 
   elements.options.forEach(({ card, choose, text, listen }, index) => {
-    text.textContent = options[index].text;
+    revealTerm(text, options[index].text);
     card.classList.add("is-revealed");
     card.classList.toggle("is-correct", index === selectedIndex && selected.correct);
     card.classList.toggle("is-wrong", index === selectedIndex && !selected.correct);
@@ -366,12 +384,12 @@ function render() {
   elements.options.forEach(({ card, choose, text, listen }, index) => {
     clearCardState(card);
     choose.disabled = false;
-    text.textContent = "";
+    concealTerm(text);
     listen.setAttribute("aria-label", `Listen to option ${optionLetters[index]}`);
     choose.setAttribute("aria-label", `Choose option ${optionLetters[index]}`);
   });
 
-  elements.questionText.textContent = drill.question;
+  concealTerm(elements.questionText, drill.question);
   elements.questionListen.setAttribute("aria-label", "Listen to tested word");
   elements.testLabel.textContent = `Cambridge ${test.book} · Test ${test.test} · Part ${part.number}`;
   elements.nextButton.disabled = true;
@@ -494,7 +512,7 @@ render();
 
 if ("serviceWorker" in navigator) {
   if (import.meta.env.PROD) {
-    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?release=v12"));
+    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?release=v13"));
   } else {
     navigator.serviceWorker
       .getRegistrations()
