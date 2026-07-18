@@ -32,9 +32,11 @@ const elements = {
 };
 
 const storageKey = "ielts-listening-paraphrase-v3";
+const autoAdvanceDelay = 2400;
 const stored = readStoredState();
 const audioPool = new Map();
 let feedbackContext = null;
+let autoAdvanceTimer = null;
 const state = {
   testIndex: Math.min(Math.max(stored.testIndex ?? 0, 0), COURSE.tests.length - 1),
   drillIndex: 0,
@@ -100,6 +102,24 @@ function currentOptions() {
   const options = distractors.map((text) => ({ text, correct: false }));
   options.splice(correctPosition(state.drillIndex), 0, { text: drill.answer, correct: true });
   return options;
+}
+
+function clearAutoAdvance() {
+  if (autoAdvanceTimer === null) return;
+  window.clearTimeout(autoAdvanceTimer);
+  autoAdvanceTimer = null;
+}
+
+function scheduleAutoAdvance() {
+  clearAutoAdvance();
+  const testId = currentTest().id;
+  const drillId = currentDrill().id;
+  autoAdvanceTimer = window.setTimeout(() => {
+    autoAdvanceTimer = null;
+    if (state.locked && currentTest().id === testId && currentDrill().id === drillId) {
+      nextDrill();
+    }
+  }, autoAdvanceDelay);
 }
 
 function completedCount(test = currentTest()) {
@@ -251,26 +271,23 @@ function updateChoiceState() {
 function revealAnswer(selectedIndex, withFeedback = true) {
   const options = currentOptions();
   const selected = options[selectedIndex];
-
-  if (state.locked) {
-    if (withFeedback) playFeedback(selected.correct ? "correct" : "wrong");
-    setInstruction(selected.correct ? "Correct" : "Not quite", selected.correct ? "correct" : "wrong");
-    navigator.vibrate?.(selected.correct ? 14 : [40, 35, 40]);
-    return;
-  }
-
   const drill = currentDrill();
+  const firstChoice = !state.locked;
 
-  stopAudio();
+  clearAutoAdvance();
+  if (firstChoice) {
+    stopAudio();
+    state.locked = true;
+    state.firstTry = selected.correct;
+    const previousResult = state.results[drill.id];
+    state.results[drill.id] = previousResult ?? {
+      completed: true,
+      firstTryCorrect: selected.correct
+    };
+    saveState();
+  }
   if (withFeedback) playFeedback(selected.correct ? "correct" : "wrong");
-  state.locked = true;
-  state.firstTry = selected.correct;
-  const previousResult = state.results[drill.id];
-  state.results[drill.id] = previousResult ?? {
-    completed: true,
-    firstTryCorrect: selected.correct
-  };
-  saveState();
+  elements.questionText.textContent = drill.question;
   elements.questionCard.classList.add("is-revealed");
   elements.questionListen.setAttribute("aria-label", `Listen to the word: ${drill.question}`);
 
@@ -289,6 +306,7 @@ function revealAnswer(selectedIndex, withFeedback = true) {
   setInstruction(selected.correct ? "Correct" : "Not quite", selected.correct ? "correct" : "wrong");
   updateProgress();
   navigator.vibrate?.(selected.correct ? 14 : [40, 35, 40]);
+  if (selected.correct) scheduleAutoAdvance();
 }
 
 function updateProgress() {
@@ -334,6 +352,7 @@ function preloadCurrentAndNext() {
 }
 
 function render() {
+  clearAutoAdvance();
   stopAudio();
   const drill = currentDrill();
   const part = currentPart();
@@ -382,6 +401,7 @@ function showFinishScreen() {
 }
 
 function nextDrill() {
+  clearAutoAdvance();
   if (!state.locked) return;
   if (state.drillIndex === currentTest().drills.length - 1) {
     showFinishScreen();
@@ -392,6 +412,7 @@ function nextDrill() {
 }
 
 function previousDrill() {
+  clearAutoAdvance();
   if (state.drillIndex > 0) {
     state.drillIndex -= 1;
     render();
@@ -405,6 +426,7 @@ function previousDrill() {
 }
 
 function restartCurrentTest() {
+  clearAutoAdvance();
   stopAudio();
   currentTest().drills.forEach((drill) => delete state.results[drill.id]);
   state.drillIndex = 0;
@@ -413,6 +435,7 @@ function restartCurrentTest() {
 }
 
 function continueAfterFinish() {
+  clearAutoAdvance();
   const nextTest = COURSE.tests[state.testIndex + 1];
   if (!nextTest) {
     stopAudio();
@@ -471,7 +494,7 @@ render();
 
 if ("serviceWorker" in navigator) {
   if (import.meta.env.PROD) {
-    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?release=v11"));
+    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?release=v12"));
   } else {
     navigator.serviceWorker
       .getRegistrations()
@@ -485,5 +508,6 @@ window.__IELTS_LISTENING_APP__ = {
   currentOptions,
   currentTest,
   currentDrill,
-  feedbackState: () => ({ kind: state.lastFeedback, context: feedbackContext?.state ?? "fallback" })
+  feedbackState: () => ({ kind: state.lastFeedback, context: feedbackContext?.state ?? "fallback" }),
+  autoAdvanceState: () => ({ pending: autoAdvanceTimer !== null, delay: autoAdvanceDelay })
 };

@@ -108,7 +108,10 @@ test("all four English phrases stay hidden until choice and Choose remains activ
   assert.match(styles, /\.option-card \.listen-action,[\s\S]*\.option-card \.choose-button \{[\s\S]*position: relative;[\s\S]*z-index: 5;[\s\S]*touch-action: manipulation;/);
   assert.doesNotMatch(app, /setInstruction\("Try again"/);
   assert.doesNotMatch(styles, /\.question-card \.term-text \{[\s\S]*opacity: 1/);
+  assert.match(styles, /\.term-text \{[\s\S]*opacity: 0;[\s\S]*visibility: hidden;/);
   assert.match(app, /elements\.questionCard\.classList\.add\("is-revealed"\)/);
+  assert.match(styles, /\.question-card\.is-revealed \.question-text \{[\s\S]*opacity: 1;[\s\S]*visibility: visible;/);
+  assert.match(app, /elements\.questionText\.textContent = drill\.question;/);
   assert.match(app, /card\.classList\.toggle\("is-correct", index === selectedIndex && selected\.correct\)/);
   assert.match(app, /card\.classList\.toggle\("is-wrong", index === selectedIndex && !selected\.correct\)/);
   assert.match(app, /card\.classList\.toggle\("is-distractor", index !== selectedIndex\)/);
@@ -116,9 +119,8 @@ test("all four English phrases stay hidden until choice and Choose remains activ
   assert.doesNotMatch(app, /choose\.disabled = true/);
   assert.doesNotMatch(app, /revealAnswer\(correctPosition\(state\.drillIndex\), false\)/);
   assert.match(app, /elements\.questionListen\.setAttribute\("aria-label", "Listen to tested word"\)/);
-  assert.match(app, /if \(state\.locked\) \{[\s\S]*playFeedback\(selected\.correct \? "correct" : "wrong"\)/);
-  assert.match(worker, /const cacheName = "ielts-listening-books-11-19-v11";/);
-  assert.match(app, /navigator\.serviceWorker\.register\("\/sw\.js\?release=v11"\)/);
+  assert.match(worker, /const cacheName = "ielts-listening-books-11-19-v12";/);
+  assert.match(app, /navigator\.serviceWorker\.register\("\/sw\.js\?release=v12"\)/);
 });
 
 test("correct and wrong feedback use distinct immediate bell cues", () => {
@@ -130,6 +132,17 @@ test("correct and wrong feedback use distinct immediate bell cues", () => {
   assert.match(app, /oscillator\.type = correct \? "sine" : "triangle"/);
   assert.match(app, /feedbackContext\.resume\(\)\.then\(ring\)/);
   assert.match(app, /playFeedbackFallback\(kind\)/);
+});
+
+test("a correct choice auto-advances after the reveal while Next remains functional", () => {
+  const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
+  assert.match(app, /const autoAdvanceDelay = 2400;/);
+  assert.match(app, /function scheduleAutoAdvance\(\)/);
+  assert.match(app, /autoAdvanceTimer = window\.setTimeout\([\s\S]*nextDrill\(\);[\s\S]*autoAdvanceDelay/);
+  assert.match(app, /if \(selected\.correct\) scheduleAutoAdvance\(\);/);
+  assert.match(app, /function nextDrill\(\) \{\s*clearAutoAdvance\(\);/);
+  assert.match(app, /elements\.nextButton\.addEventListener\("click", nextDrill\)/);
+  assert.match(app, /autoAdvanceState: \(\) => \(\{ pending: autoAdvanceTimer !== null, delay: autoAdvanceDelay \}\)/);
 });
 
 test("current and following drill audio are held in a persistent preload pool", () => {

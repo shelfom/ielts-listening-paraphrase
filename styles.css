@@ -311,6 +311,7 @@ h1 {
   display: block;
   width: 100%;
   opacity: 0;
+  visibility: hidden;
   font-family: var(--serif);
   font-size: clamp(1.35rem, 3.2vw, 2.35rem);
   font-weight: 600;
@@ -326,8 +327,15 @@ h1 {
 
 .is-revealed .term-text {
   opacity: 1;
+  visibility: visible;
   transform: translateY(0);
   transition: opacity 320ms ease, transform 320ms ease;
+}
+
+.question-card.is-revealed .question-text {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
 }
 
 .card-actions {
