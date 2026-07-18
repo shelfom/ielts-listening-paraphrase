@@ -156,40 +156,48 @@ function playFeedback(kind) {
   }
 
   try {
-    feedbackContext ??= new AudioContextClass();
-    if (feedbackContext.state === "suspended") feedbackContext.resume().catch(() => {});
+    if (!feedbackContext || feedbackContext.state === "closed") {
+      feedbackContext = new AudioContextClass();
+    }
 
-    const start = feedbackContext.currentTime + 0.006;
-    const correct = kind === "correct";
-    const tones = correct
-      ? [
-          { frequency: 659.25, delay: 0, duration: 0.16 },
-          { frequency: 987.77, delay: 0.11, duration: 0.3 }
-        ]
-      : [
-          { frequency: 220, delay: 0, duration: 0.15 },
-          { frequency: 138.59, delay: 0.12, duration: 0.3 }
-        ];
-    const master = feedbackContext.createGain();
-    master.gain.setValueAtTime(correct ? 0.42 : 0.34, start);
-    master.gain.exponentialRampToValueAtTime(0.0001, start + 0.46);
-    master.connect(feedbackContext.destination);
+    const ring = () => {
+      const start = feedbackContext.currentTime + 0.008;
+      const correct = kind === "correct";
+      const tones = correct
+        ? [
+            { frequency: 783.99, delay: 0, duration: 0.18 },
+            { frequency: 1174.66, delay: 0.12, duration: 0.34 }
+          ]
+        : [
+            { frequency: 329.63, delay: 0, duration: 0.18 },
+            { frequency: 246.94, delay: 0.13, duration: 0.34 }
+          ];
+      const master = feedbackContext.createGain();
+      master.gain.setValueAtTime(correct ? 0.48 : 0.42, start);
+      master.gain.exponentialRampToValueAtTime(0.0001, start + 0.52);
+      master.connect(feedbackContext.destination);
 
-    tones.forEach(({ frequency, delay, duration }) => {
-      const oscillator = feedbackContext.createOscillator();
-      const envelope = feedbackContext.createGain();
-      const toneStart = start + delay;
-      oscillator.type = correct ? "sine" : "square";
-      oscillator.frequency.setValueAtTime(frequency, toneStart);
-      if (!correct) oscillator.frequency.exponentialRampToValueAtTime(frequency * 0.82, toneStart + duration);
-      envelope.gain.setValueAtTime(0.0001, toneStart);
-      envelope.gain.exponentialRampToValueAtTime(1, toneStart + 0.018);
-      envelope.gain.exponentialRampToValueAtTime(0.0001, toneStart + duration);
-      oscillator.connect(envelope);
-      envelope.connect(master);
-      oscillator.start(toneStart);
-      oscillator.stop(toneStart + duration + 0.02);
-    });
+      tones.forEach(({ frequency, delay, duration }) => {
+        const oscillator = feedbackContext.createOscillator();
+        const envelope = feedbackContext.createGain();
+        const toneStart = start + delay;
+        oscillator.type = correct ? "sine" : "triangle";
+        oscillator.frequency.setValueAtTime(frequency, toneStart);
+        envelope.gain.setValueAtTime(0.0001, toneStart);
+        envelope.gain.exponentialRampToValueAtTime(1, toneStart + 0.012);
+        envelope.gain.exponentialRampToValueAtTime(0.0001, toneStart + duration);
+        oscillator.connect(envelope);
+        envelope.connect(master);
+        oscillator.start(toneStart);
+        oscillator.stop(toneStart + duration + 0.02);
+      });
+    };
+
+    if (feedbackContext.state === "suspended") {
+      feedbackContext.resume().then(ring).catch(() => playFeedbackFallback(kind));
+    } else {
+      ring();
+    }
   } catch {
     playFeedbackFallback(kind);
   }
@@ -207,7 +215,6 @@ async function playClip(card, src, onFinished) {
 
   audio.onended = () => {
     card.classList.remove("is-playing");
-    card.classList.add("is-heard");
     state.activeAudio = null;
     state.activeCard = null;
     onFinished();
@@ -265,13 +272,14 @@ function revealAnswer(selectedIndex, withFeedback = true) {
   };
   saveState();
   elements.questionCard.classList.add("is-revealed");
+  elements.questionListen.setAttribute("aria-label", `Listen to the word: ${drill.question}`);
 
   elements.options.forEach(({ card, choose, text, listen }, index) => {
     text.textContent = options[index].text;
     card.classList.add("is-revealed");
-    card.classList.toggle("is-correct", options[index].correct);
+    card.classList.toggle("is-correct", index === selectedIndex && selected.correct);
     card.classList.toggle("is-wrong", index === selectedIndex && !selected.correct);
-    card.classList.toggle("is-distractor", !options[index].correct && index !== selectedIndex);
+    card.classList.toggle("is-distractor", index !== selectedIndex);
     choose.disabled = false;
     listen.setAttribute("aria-label", `Listen to option ${optionLetters[index]}: ${options[index].text}`);
     choose.setAttribute("aria-label", `Option ${optionLetters[index]}: ${options[index].text}`);
@@ -296,7 +304,6 @@ function updateProgress() {
 function clearCardState(card) {
   card.classList.remove(
     "is-playing",
-    "is-heard",
     "is-ready",
     "is-wrong",
     "is-revealed",
@@ -331,11 +338,11 @@ function render() {
   const drill = currentDrill();
   const part = currentPart();
   const test = currentTest();
-  const result = state.results[drill.id];
 
   state.heard = { question: false, options: [false, false, false] };
   state.locked = false;
   state.firstTry = true;
+  state.lastFeedback = null;
   clearCardState(elements.questionCard);
   elements.options.forEach(({ card, choose, text, listen }, index) => {
     clearCardState(card);
@@ -346,18 +353,12 @@ function render() {
   });
 
   elements.questionText.textContent = drill.question;
-  elements.questionListen.setAttribute("aria-label", `Listen to the word: ${drill.question}`);
+  elements.questionListen.setAttribute("aria-label", "Listen to tested word");
   elements.testLabel.textContent = `Cambridge ${test.book} · Test ${test.test} · Part ${part.number}`;
   elements.nextButton.disabled = true;
   elements.backButton.disabled = state.testIndex === 0 && state.drillIndex === 0;
   updateProgress();
   updateChoiceState();
-
-  if (result?.completed) {
-    state.heard = { question: true, options: [true, true, true] };
-    state.firstTry = result.firstTryCorrect;
-    revealAnswer(correctPosition(state.drillIndex), false);
-  }
 
   saveState();
   preloadCurrentAndNext();
@@ -470,7 +471,7 @@ render();
 
 if ("serviceWorker" in navigator) {
   if (import.meta.env.PROD) {
-    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?release=v10"));
+    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?release=v11"));
   } else {
     navigator.serviceWorker
       .getRegistrations()

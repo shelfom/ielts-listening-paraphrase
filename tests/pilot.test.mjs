@@ -99,29 +99,36 @@ test("Choose is available immediately and does not require listening first", () 
 });
 
 test("all four English phrases stay hidden until choice and Choose remains active afterward", () => {
+  const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
   const styles = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
   const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
   const worker = readFileSync(new URL("../public/sw.js", import.meta.url), "utf8");
+  assert.doesNotMatch(html, /class="heard-mark"/);
   assert.match(styles, /\.option-card \.card-actions \{[\s\S]*position: relative;[\s\S]*z-index: 4;/);
   assert.match(styles, /\.option-card \.listen-action,[\s\S]*\.option-card \.choose-button \{[\s\S]*position: relative;[\s\S]*z-index: 5;[\s\S]*touch-action: manipulation;/);
   assert.doesNotMatch(app, /setInstruction\("Try again"/);
   assert.doesNotMatch(styles, /\.question-card \.term-text \{[\s\S]*opacity: 1/);
   assert.match(app, /elements\.questionCard\.classList\.add\("is-revealed"\)/);
+  assert.match(app, /card\.classList\.toggle\("is-correct", index === selectedIndex && selected\.correct\)/);
   assert.match(app, /card\.classList\.toggle\("is-wrong", index === selectedIndex && !selected\.correct\)/);
+  assert.match(app, /card\.classList\.toggle\("is-distractor", index !== selectedIndex\)/);
   assert.match(app, /text\.textContent = options\[index\]\.text;/);
   assert.doesNotMatch(app, /choose\.disabled = true/);
+  assert.doesNotMatch(app, /revealAnswer\(correctPosition\(state\.drillIndex\), false\)/);
+  assert.match(app, /elements\.questionListen\.setAttribute\("aria-label", "Listen to tested word"\)/);
   assert.match(app, /if \(state\.locked\) \{[\s\S]*playFeedback\(selected\.correct \? "correct" : "wrong"\)/);
-  assert.match(worker, /const cacheName = "ielts-listening-books-11-19-v10";/);
-  assert.match(app, /navigator\.serviceWorker\.register\("\/sw\.js\?release=v10"\)/);
+  assert.match(worker, /const cacheName = "ielts-listening-books-11-19-v11";/);
+  assert.match(app, /navigator\.serviceWorker\.register\("\/sw\.js\?release=v11"\)/);
 });
 
-test("correct and wrong feedback use distinct immediate synthesized cues", () => {
+test("correct and wrong feedback use distinct immediate bell cues", () => {
   const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
-  assert.match(app, /659\.25/);
-  assert.match(app, /987\.77/);
-  assert.match(app, /220/);
-  assert.match(app, /138\.59/);
-  assert.match(app, /oscillator\.type = correct \? "sine" : "square"/);
+  assert.match(app, /783\.99/);
+  assert.match(app, /1174\.66/);
+  assert.match(app, /329\.63/);
+  assert.match(app, /246\.94/);
+  assert.match(app, /oscillator\.type = correct \? "sine" : "triangle"/);
+  assert.match(app, /feedbackContext\.resume\(\)\.then\(ring\)/);
   assert.match(app, /playFeedbackFallback\(kind\)/);
 });
 
@@ -135,11 +142,14 @@ test("current and following drill audio are held in a persistent preload pool", 
 
 test("Back and Next sit below the listening cards", () => {
   const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const styles = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
   const navigation = html.indexOf('class="practice-nav"');
   const cards = html.indexOf('class="audio-stage"');
   assert.ok(navigation > cards);
   assert.match(html, /class="text-button back-button"/);
   assert.match(html, /class="text-button next-button"/);
+  assert.match(styles, /\.back-button,\s*\.next-button \{[\s\S]*width: 100%;[\s\S]*max-width: 144px;/);
+  assert.doesNotMatch(styles, /\.next-button:not\(:disabled\) \{[\s\S]*background: var\(--accent\)/);
 });
 
 test("the word Listen control sits in the same lower-right choice row", () => {
