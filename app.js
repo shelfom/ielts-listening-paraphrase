@@ -495,7 +495,7 @@ render();
 
 if ("serviceWorker" in navigator) {
   if (import.meta.env.PROD) {
-    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?release=v15"));
+    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?release=v16"));
   } else {
     navigator.serviceWorker
       .getRegistrations()

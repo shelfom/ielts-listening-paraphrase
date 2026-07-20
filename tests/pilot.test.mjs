@@ -3,9 +3,9 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { ALL_DRILLS, ALL_TESTS, COURSE, PEP_TALKS, audioKey, correctPosition } from "../data.js";
 
-test("course covers Books 11–19 from required through higher risk of", () => {
-  assert.equal(COURSE.tests.length, 36);
-  assert.equal(COURSE.total, 1825);
+test("course covers Books 11–20 from required through usually most effective", () => {
+  assert.equal(COURSE.tests.length, 40);
+  assert.equal(COURSE.total, 2069);
   assert.deepEqual(ALL_DRILLS[0], {
     id: "11-1-1-01",
     book: 11,
@@ -17,11 +17,11 @@ test("course covers Books 11–19 from required through higher risk of", () => {
     distractor2: ALL_DRILLS[0].distractor2,
     distractorScope: "same-part"
   });
-  assert.equal(ALL_DRILLS.at(-1).book, 19);
+  assert.equal(ALL_DRILLS.at(-1).book, 20);
   assert.equal(ALL_DRILLS.at(-1).test, 4);
   assert.equal(ALL_DRILLS.at(-1).part, 4);
-  assert.equal(ALL_DRILLS.at(-1).question, "higher risk of");
-  assert.equal(ALL_DRILLS.at(-1).answer, "increased threat of");
+  assert.equal(ALL_DRILLS.at(-1).question, "usually most effective");
+  assert.equal(ALL_DRILLS.at(-1).answer, "for them to have any effect");
 });
 
 test("first Test retains the accepted 30-drill, four-Part sequence", () => {
@@ -32,6 +32,17 @@ test("first Test retains the accepted 30-drill, four-Part sequence", () => {
   assert.deepEqual(firstTest.parts.map((part) => part.total), [9, 3, 8, 10]);
   assert.equal(firstTest.drills.at(-1).question, "purpose");
   assert.equal(firstTest.drills.at(-1).answer, "so that");
+});
+
+test("Book 20 contributes four complete Tests and 244 verified drills", () => {
+  const book20Tests = ALL_TESTS.filter((testData) => testData.book === 20);
+  assert.equal(book20Tests.length, 4);
+  assert.equal(book20Tests.reduce((sum, testData) => sum + testData.total, 0), 244);
+  assert.deepEqual(book20Tests.map((testData) => testData.total), [62, 61, 61, 60]);
+  assert.deepEqual(
+    book20Tests.flatMap((testData) => testData.parts.map((part) => part.total)),
+    [14, 16, 17, 15, 14, 15, 17, 15, 15, 15, 16, 15, 14, 15, 16, 15]
+  );
 });
 
 test("distractors stay in the original Listening Part whenever the source supplies two", () => {
@@ -66,12 +77,12 @@ test("answer positions are deterministic and balanced within each Test", () => {
   );
 });
 
-test("ids, audio keys, and Book 20 readiness remain stable", () => {
-  assert.equal(new Set(ALL_DRILLS.map((drill) => drill.id)).size, 1825);
+test("ids, audio keys, and Book 21 readiness remain stable", () => {
+  assert.equal(new Set(ALL_DRILLS.map((drill) => drill.id)).size, 2069);
   assert.equal(audioKey("don't touch"), "dont-touch");
   assert.equal(audioKey("you'll be informed of"), "youll-be-informed-of");
   assert.equal(audioKey("STEM disciplines"), "stem-disciplines");
-  assert.equal(COURSE.futureBookReady, 20);
+  assert.equal(COURSE.futureBookReady, 21);
   assert.equal(COURSE.total, ALL_DRILLS.length);
 });
 
@@ -128,8 +139,8 @@ test("all four English phrases stay hidden until choice and Choose remains activ
   assert.doesNotMatch(app, /choose\.disabled = true/);
   assert.doesNotMatch(app, /revealAnswer\(correctPosition\(state\.drillIndex\), false\)/);
   assert.match(app, /elements\.questionListen\.setAttribute\("aria-label", "Listen to tested word"\)/);
-  assert.match(worker, /const cacheName = "ielts-listening-books-11-19-v15";/);
-  assert.match(app, /navigator\.serviceWorker\.register\("\/sw\.js\?release=v15"\)/);
+  assert.match(worker, /const cacheName = "ielts-listening-books-11-20-v16";/);
+  assert.match(app, /navigator\.serviceWorker\.register\("\/sw\.js\?release=v16"\)/);
 });
 
 test("correct and wrong feedback use distinct immediate bell cues", () => {
