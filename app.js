@@ -576,8 +576,7 @@ if (supportsNativeDialog) {
   elements.contentsDialog.addEventListener("cancel", (event) => {
     // Keep Escape aligned with close(): no selection is made.
     event.preventDefault();
-    contentsBookPicked = false;
-    elements.contentsDialog.close();
+    dismissContents();
   });
   // Actual backdrop dismissal (clicks directly on the dialog, not its content).
   elements.contentsDialog.addEventListener("click", (event) => {

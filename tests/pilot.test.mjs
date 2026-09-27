@@ -348,9 +348,9 @@ test("selecting a book closes the dialog, hides completion, and jumps to first d
 
 test("dismissal via Escape, close button, or backdrop leaves the exercise unchanged", () => {
   const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
-  // Native dialog: cancel (Escape) prevented and routed through close without selection.
+  // Native dialog: cancel (Escape) prevented and routed through dismissContents.
   assert.match(app, /elements\.contentsDialog\.addEventListener\("cancel", \(event\) =>/);
-  assert.match(app, /contentsBookPicked = false;\s*elements\.contentsDialog\.close\(\);/);
+  assert.match(app, /event\.preventDefault\(\);\s*dismissContents\(\);/);
   // Actual backdrop dismissal.
   assert.match(app, /if \(event\.target === elements\.contentsDialog\) dismissContents\(\);/);
   // Close button.
@@ -381,6 +381,22 @@ test("dialog provides focus trap, initial focus, background inertness, and focus
   assert.match(app, /trapTabKey\(\s*keyEvent,\s*elements\.contentsDialog,\s*document\.activeElement/);
   assert.match(app, /elements\.contentsDialog\.addEventListener\(\s*"keydown",\s*contentsDialogKeydownHandler/);
   assert.match(app, /elements\.contentsDialog\.removeEventListener\(\s*"keydown",\s*contentsDialogKeydownHandler/);
+});
+
+test("repeated open/Escape cycles do not accumulate keydown listeners", () => {
+  const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
+  // closeContentsDialog must remove the keydown handler on every close path.
+  const closeBody = app.match(/function closeContentsDialog\(\) \{\n([\s\S]*?)\n\}\n/);
+  assert.ok(closeBody, "closeContentsDialog must exist");
+  assert.match(
+    closeBody[1],
+    /elements\.contentsDialog\.removeEventListener\(\s*"keydown",\s*contentsDialogKeydownHandler/
+  );
+  // The handler is assigned once per open, not accumulated.
+  assert.match(app, /contentsDialogKeydownHandler = \(keyEvent\) => \{/);
+  // Every close path (dismiss, select, cancel) goes through closeContentsDialog.
+  assert.match(app, /function dismissContents\(\)[\s\S]*closeContentsDialog\(\)/);
+  assert.match(app, /function selectBook\(book\)[\s\S]*closeContentsDialog\(\)/);
 });
 
 test("Contents modal stacks above completion and keeps keyboard shortcuts inactive while open", () => {
@@ -592,6 +608,36 @@ test("normal same-drill bells are unchanged and Contents dismissal preserves exe
   assert.match(jumpBody, /cancelFeedbackAudio\(true\)/);
 });
 
+test("no-WebAudio fallback clip is paused and rewound by cancel after play resolves", async () => {
+  let playResolved = false;
+  const fakeClip = {
+    paused: false,
+    currentTime: 0,
+    play() {
+      this.paused = false;
+      return Promise.resolve().then(() => {
+        playResolved = true;
+      });
+    },
+    pause() {
+      this.paused = true;
+    }
+  };
+  const bells = createFeedbackBells({
+    createAudioContext: () => null,
+    fallback: { correct: fakeClip, wrong: fakeClip }
+  });
+  bells.play("correct");
+  // Wait for the play promise to resolve.
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.ok(playResolved, "play() should have resolved");
+  assert.equal(fakeClip.paused, false, "clip should be playing before cancel");
+  bells.cancel(true);
+  assert.equal(fakeClip.paused, true, "clip should be paused after cancel");
+  assert.equal(fakeClip.currentTime, 0, "clip currentTime should be rewound to 0");
+});
+
 // --- Completion card must stay within the viewport at 320x568 and 375x667. ---
 
 test("completion card uses shrink-safe grid tracks and border-box sizing", () => {
@@ -609,6 +655,11 @@ test("completion card uses shrink-safe grid tracks and border-box sizing", () =>
     styles,
     /\.primary-button,[\s\S]*\.secondary-button \{[\s\S]*white-space: normal;[\s\S]*overflow-wrap: anywhere;/
   );
+});
+
+test("completion card h2 shrinks to 2rem at 360px to prevent text clipping", () => {
+  const styles = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
+  assert.match(styles, /@media \(max-width: 360px\)[\s\S]*\.finish-card h2 \{[\s\S]*font-size: 2rem;/);
 });
 
 test("completion card constrains height and scrolls so every button stays reachable", () => {

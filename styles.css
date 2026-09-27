@@ -1182,5 +1182,9 @@ dialog:where([open]) {
     min-height: 46px;
     padding: 11px 14px;
   }
+
+  .finish-card h2 {
+    font-size: 2rem;
+  }
 }
 

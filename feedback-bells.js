@@ -103,12 +103,12 @@ export function createFeedbackBells(options) {
   function play(kind) {
     epoch += 1;
     const expectedEpoch = epoch;
-    const audioContextFactory = createAudioContext();
-    if (!audioContextFactory) {
-      playFallback(kind, expectedEpoch);
-      return;
-    }
     try {
+      const audioContextFactory = createAudioContext();
+      if (!audioContextFactory) {
+        playFallback(kind, expectedEpoch);
+        return;
+      }
       if (!context || context.state === "closed") {
         context = audioContextFactory;
       }
@@ -145,12 +145,17 @@ export function createFeedbackBells(options) {
       } catch {}
     });
     outputs.clear();
-    fallbackAudios.forEach((audio) => {
-      try {
-        audio.pause();
-        audio.currentTime = 0;
-      } catch {}
-    });
+    // Always pause+rewind ALL configured fallback clips, not just tracked ones.
+    // This ensures cancellation works even if play() resolved (playback started)
+    // and the sound was removed from the tracking set.
+    if (fallback) {
+      Object.values(fallback).forEach((audio) => {
+        try {
+          audio.pause();
+          audio.currentTime = 0;
+        } catch {}
+      });
+    }
     fallbackAudios.clear();
   }
 
