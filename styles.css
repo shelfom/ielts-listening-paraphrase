@@ -641,6 +641,7 @@ h1 {
   padding: 24px;
   display: grid;
   place-items: center;
+  grid-template-columns: minmax(0, 1fr);
   background: color-mix(in srgb, var(--canvas) 90%, transparent);
   backdrop-filter: blur(14px);
 }
@@ -650,7 +651,13 @@ h1 {
 }
 
 .finish-card {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: min(100%, 520px);
   width: min(100%, 520px);
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: clamp(30px, 6vw, 52px);
   border: 1.5px solid var(--line);
   border-radius: 4px;
@@ -686,7 +693,7 @@ h1 {
 .finish-stats {
   margin: clamp(24px, 5vw, 38px) 0;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   border-block: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
 }
 
@@ -716,7 +723,12 @@ h1 {
 
 .primary-button,
 .secondary-button {
+  box-sizing: border-box;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
   border-radius: 999px;
   padding: 14px 18px;
 }
@@ -998,7 +1010,12 @@ h1 {
   outline-offset: 4px;
 }
 
+dialog:where([open]) {
+  display: block;
+}
+
 .contents-dialog {
+  box-sizing: border-box;
   width: min(92vw, 420px);
   max-width: 420px;
   max-height: min(82dvh, 620px);

@@ -6,8 +6,12 @@ import {
   buildBookIndex,
   firstTestIndex,
   prepareBookJump,
-  createPlayGuard
+  createPlayGuard,
+  trapTabKey,
+  getTabbable,
+  TAB_TABBABLE_SELECTOR
 } from "../contents.js";
+import { createFeedbackBells } from "../feedback-bells.js";
 
 test("course covers Books 11–20 from required through usually most effective", () => {
   assert.equal(COURSE.tests.length, 40);
@@ -145,19 +149,22 @@ test("all four English phrases stay hidden until choice and Choose remains activ
   assert.doesNotMatch(app, /choose\.disabled = true/);
   assert.doesNotMatch(app, /revealAnswer\(correctPosition\(state\.drillIndex\), false\)/);
   assert.match(app, /elements\.questionListen\.setAttribute\("aria-label", "Listen to tested word"\)/);
-  assert.match(worker, /const cacheName = "ielts-listening-books-11-20-v17";/);
-  assert.match(app, /navigator\.serviceWorker\.register\("\/sw\.js\?release=v17"\)/);
+  assert.match(worker, /const cacheName = "ielts-listening-books-11-20-v18";/);
+  assert.match(app, /navigator\.serviceWorker\.register\("\/sw\.js\?release=v18"\)/);
 });
 
 test("correct and wrong feedback use distinct immediate bell cues", () => {
-  const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
-  assert.match(app, /783\.99/);
-  assert.match(app, /1174\.66/);
-  assert.match(app, /329\.63/);
-  assert.match(app, /246\.94/);
-  assert.match(app, /oscillator\.type = correct \? "sine" : "triangle"/);
-  assert.match(app, /feedbackContext\.resume\(\)\.then\(ring\)/);
-  assert.match(app, /playFeedbackFallback\(kind\)/);
+  const bellsSource = readFileSync(
+    new URL("../feedback-bells.js", import.meta.url),
+    "utf8"
+  );
+  assert.match(bellsSource, /783\.99/);
+  assert.match(bellsSource, /1174\.66/);
+  assert.match(bellsSource, /329\.63/);
+  assert.match(bellsSource, /246\.94/);
+  assert.match(bellsSource, /oscillator\.type = correct \? "sine" : "triangle"/);
+  assert.match(bellsSource, /context\.resume\(\)\.then\(\s*\(\) => ring/);
+  assert.match(bellsSource, /playFallback\(kind, expectedEpoch\)/);
 });
 
 test("a correct choice stays visible until the learner clicks Next", () => {
@@ -365,13 +372,15 @@ test("dialog provides focus trap, initial focus, background inertness, and focus
   // Focus returns to opener on close (native close event for dismissal).
   assert.match(app, /elements\.contentsDialog\.addEventListener\("close", \(\) =>/);
   assert.match(app, /contentsReturnFocus\?\.focus\?\.\(\{ preventScroll: true \}\)/);
-  // Fallback path: background inertness and Tab confinement.
+  // Fallback path: background inertness.
   assert.match(app, /setAttribute\("inert", ""\)/);
   assert.match(app, /removeAttribute\("inert"\)/);
-  assert.match(app, /function handleFallbackKeydown\(keyEvent\)/);
-  assert.match(app, /if \(keyEvent\.key === "Tab"\)/);
-  assert.match(app, /keyEvent\.preventDefault\(\);\s*last\.focus\(\)/);
-  assert.match(app, /keyEvent\.preventDefault\(\);\s*first\.focus\(\)/);
+  // A scoped keydown handler using the shared trapTabKey helper is bound in
+  // both native and fallback modes and removed on every close path.
+  assert.match(app, /contentsDialogKeydownHandler = \(keyEvent\) =>/);
+  assert.match(app, /trapTabKey\(\s*keyEvent,\s*elements\.contentsDialog,\s*document\.activeElement/);
+  assert.match(app, /elements\.contentsDialog\.addEventListener\(\s*"keydown",\s*contentsDialogKeydownHandler/);
+  assert.match(app, /elements\.contentsDialog\.removeEventListener\(\s*"keydown",\s*contentsDialogKeydownHandler/);
 });
 
 test("Contents modal stacks above completion and keeps keyboard shortcuts inactive while open", () => {
@@ -381,4 +390,236 @@ test("Contents modal stacks above completion and keeps keyboard shortcuts inacti
   assert.match(styles, /\.contents-list \{[\s\S]*overflow-y: auto;/);
   assert.match(app, /const contentsOpen =[\s\S]*if \(contentsOpen\) return;/);
 });
+
+// --- Explicit Tab wrap shared by native and fallback modes. ---
+
+function makeTrapContainer(count) {
+  const buttons = Array.from({ length: count }, (_, index) => ({
+    tag: "button",
+    focusCallCount: 0,
+    focus() {
+      this.focusCallCount += 1;
+    },
+    getClientRects: () => [{}],
+    hasAttribute: () => false
+  }));
+  return {
+    buttons,
+    querySelectorAll: () => buttons,
+    contains: (element) => buttons.includes(element)
+  };
+}
+
+test("trapTabKey wraps Tab forward and Shift+Tab backward in the open dialog", () => {
+  const container = makeTrapContainer(3);
+  const [first, middle, last] = container.buttons;
+
+  // Forward Tab on the last item wraps to the first.
+  assert.equal(trapTabKey({ key: "Tab" }, container, last), true);
+  assert.equal(first.focusCallCount, 1);
+  // Forward Tab elsewhere stays inside (browser moves focus normally).
+  assert.equal(trapTabKey({ key: "Tab" }, container, middle), false);
+  assert.equal(first.focusCallCount, 1);
+  // Shift+Tab on the first item wraps to the last.
+  assert.equal(trapTabKey({ key: "Tab", shiftKey: true }, container, first), true);
+  assert.equal(last.focusCallCount, 1);
+  // Focus that somehow escaped the dialog recovers to the ends.
+  const outsideFocus = { tag: "body" };
+  assert.equal(trapTabKey({ key: "Tab" }, container, outsideFocus), true);
+  assert.equal(first.focusCallCount, 2);
+  assert.equal(
+    trapTabKey({ key: "Tab", shiftKey: true }, container, outsideFocus),
+    true
+  );
+  assert.equal(last.focusCallCount, 2);
+  // Non-Tab keys are untouched.
+  assert.equal(trapTabKey({ key: "Escape" }, container, last), false);
+});
+
+test("getTabbable keeps only visible enabled controls in dialog order", () => {
+  const visible = { hasAttribute: () => false, getClientRects: () => [{}] };
+  const hidden = { hasAttribute: () => false, getClientRects: () => [] };
+  const disabled = { hasAttribute: (name) => name === "disabled", getClientRects: () => [{}] };
+  const container = { querySelectorAll: () => [visible, hidden, disabled] };
+  assert.deepEqual(getTabbable(container), [visible]);
+});
+
+test("native and fallback dialog modes share one Tab-wrap wiring", () => {
+  const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
+  // The handler is registered before the native/fallback branch, so both
+  // paths receive it; no separate fallback Tab branch remains.
+  const handlerIndex = app.indexOf("contentsDialogKeydownHandler = (keyEvent) =>");
+  const branchIndex = app.indexOf("if (supportsNativeDialog) {", handlerIndex);
+  assert.ok(handlerIndex > -1 && branchIndex > handlerIndex);
+  assert.doesNotMatch(app, /const focusables = focusableElements\(\)/);
+  assert.match(app, TAB_TABBABLE_SELECTOR ? /trapTabKey/ : /trapTabKey/);
+});
+
+// --- Feedback epoch: stale resume/tone/fallback must not survive a jump. ---
+
+class Deferred {
+  constructor() {
+    this.promise = new Promise((resolve, reject) => {
+      this.resolve = resolve;
+      this.reject = reject;
+    });
+  }
+}
+
+function makeFakeOscillator() {
+  return {
+    stopped: false,
+    disconnected: false,
+    onended: null,
+    type: "",
+    frequency: { setValueAtTime() {} },
+    connect() {},
+    start() {},
+    stop() {
+      this.stopped = true;
+    },
+    disconnect() {
+      this.disconnected = true;
+    }
+  };
+}
+
+function makeFakeAudioContext(state) {
+  const deferred = new Deferred();
+  return {
+    state,
+    currentTime: 1,
+    destination: {},
+    resume: () => deferred.promise,
+    _deferred: deferred,
+    createGain() {
+      return {
+        gain: { setValueAtTime() {}, exponentialRampToValueAtTime() {} },
+        connect() {},
+        disconnect() {}
+      };
+    },
+    createOscillator: makeFakeOscillator
+  };
+}
+
+function makeBells(context) {
+  return createFeedbackBells({
+    createAudioContext: () => context,
+    fallback: {
+      correct: { pause() {}, play: async () => {}, currentTime: 0 },
+      wrong: { pause() {}, play: async () => {}, currentTime: 0 }
+    }
+  });
+}
+
+test("late resume resolve after a book jump cannot ring the stale feedback", async () => {
+  const context = makeFakeAudioContext("suspended");
+  const bells = makeBells(context);
+  const before = bells.epoch();
+  bells.play("correct");
+  assert.equal(bells.epoch(), before + 1);
+  // A book jump invalidates the epoch before resume resolves.
+  bells.cancel(true);
+  context._deferred.resolve();
+  await context._deferred.promise.catch(() => {});
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.deepEqual(bells.state(), {
+    oscillators: 0,
+    outputs: 0,
+    fallbackAudios: 0
+  });
+});
+
+test("late resume rejection after a book jump cannot start a fallback clip", async () => {
+  const context = makeFakeAudioContext("suspended");
+  const bells = makeBells(context);
+  bells.play("wrong");
+  bells.cancel(true);
+  context._deferred.reject(new Error("suspended resume failed"));
+  await context._deferred.promise.catch(() => {});
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(bells.state().fallbackAudios, 0);
+});
+
+test("rejected resume on the current epoch starts one fallback clip only", async () => {
+  const context = makeFakeAudioContext("suspended");
+  let played = 0;
+  const bells = createFeedbackBells({
+    createAudioContext: () => context,
+    fallback: {
+      wrong: { pause() {}, play: async () => (played += 1), currentTime: 0 }
+    }
+  });
+  bells.play("wrong");
+  context._deferred.reject(new Error("resume failed"));
+  await context._deferred.promise.catch(() => {});
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(played, 1);
+  assert.equal(bells.state().fallbackAudios, 0);
+});
+
+test("book selection cancels running feedback tones and fallback clips", () => {
+  const context = makeFakeAudioContext("running");
+  const bells = makeBells(context);
+  bells.play("correct");
+  const active = bells.state();
+  assert.ok(active.oscillators >= 2);
+  assert.ok(active.outputs >= 1);
+  bells.cancel(true);
+  assert.deepEqual(bells.state(), {
+    oscillators: 0,
+    outputs: 0,
+    fallbackAudios: 0
+  });
+  // Cancellation without epoch invalidation stays available for dismiss paths.
+  bells.cancel(false);
+  assert.equal(bells.state().oscillators, 0);
+});
+
+test("normal same-drill bells are unchanged and Contents dismissal preserves exercise state", () => {
+  const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
+  // dismissContents does not touch feedback; only jumpToBook invalidates it.
+  const dismissBody = app.slice(
+    app.indexOf("function dismissContents()"),
+    app.indexOf("function jumpToBook(book)")
+  );
+  assert.doesNotMatch(dismissBody, /cancelFeedbackAudio/);
+  const jumpBody = app.slice(
+    app.indexOf("function jumpToBook(book)"),
+    app.indexOf("function selectBook(book)")
+  );
+  assert.match(jumpBody, /cancelFeedbackAudio\(true\)/);
+});
+
+// --- Completion card must stay within the viewport at 320x568 and 375x667. ---
+
+test("completion card uses shrink-safe grid tracks and border-box sizing", () => {
+  const styles = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
+  assert.match(styles, /\.finish-screen \{[\s\S]*grid-template-columns: minmax\(0, 1fr\);/);
+  assert.match(
+    styles,
+    /\.finish-card \{[\s\S]*box-sizing: border-box;[\s\S]*min-width: 0;[\s\S]*max-width: min\(100%, 520px\);/
+  );
+  assert.match(
+    styles,
+    /\.finish-stats \{[\s\S]*grid-template-columns: minmax\(0, 1fr\) minmax\(0, 1fr\);/
+  );
+  assert.match(
+    styles,
+    /\.primary-button,[\s\S]*\.secondary-button \{[\s\S]*white-space: normal;[\s\S]*overflow-wrap: anywhere;/
+  );
+});
+
+test("completion card constrains height and scrolls so every button stays reachable", () => {
+  const styles = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
+  assert.match(
+    styles,
+    /\.finish-card \{[\s\S]*max-height: calc\(100dvh - 48px\);[\s\S]*overflow-y: auto;[\s\S]*overscroll-behavior: contain;/
+  );
+  // Closed dialog remains hidden; no unconditional display override.
+  assert.match(styles, /dialog:where\(\[open\]\)\s*\{[\s\S]*display: block;/);
+  assert.doesNotMatch(styles, /\.contents-dialog\s*\{[^}]*display:\s*(block|flex)/);
+});
+
 

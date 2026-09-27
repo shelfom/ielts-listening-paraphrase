@@ -3,8 +3,10 @@ import {
   buildBookIndex,
   firstTestIndex,
   prepareBookJump,
-  createPlayGuard
+  createPlayGuard,
+  trapTabKey
 } from "./contents.js";
+import { createFeedbackBells } from "./feedback-bells.js";
 
 const $ = (id) => document.getElementById(id);
 const optionLetters = ["A", "B", "C"];
@@ -72,6 +74,18 @@ const feedbackSounds = {
 Object.values(feedbackSounds).forEach((audio) => {
   audio.preload = "auto";
   audio.volume = 0.9;
+});
+
+const feedbackBells = createFeedbackBells({
+  createAudioContext: () => {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return null;
+    if (!feedbackContext || feedbackContext.state === "closed") {
+      feedbackContext = new AudioContextClass();
+    }
+    return feedbackContext;
+  },
+  fallback: feedbackSounds
 });
 
 function readStoredState() {
@@ -185,68 +199,14 @@ function revealAllTerms(drill, options) {
   void elements.questionText.offsetWidth;
 }
 
-function playFeedbackFallback(kind) {
-  const sound = feedbackSounds[kind];
-  sound.pause();
-  sound.currentTime = 0;
-  sound.volume = 1;
-  sound.play().catch(() => {});
-}
-
 function playFeedback(kind) {
   state.lastFeedback = kind;
-  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-  if (!AudioContextClass) {
-    playFeedbackFallback(kind);
-    return;
-  }
+  feedbackBells.play(kind);
+}
 
-  try {
-    if (!feedbackContext || feedbackContext.state === "closed") {
-      feedbackContext = new AudioContextClass();
-    }
-
-    const ring = () => {
-      const start = feedbackContext.currentTime + 0.008;
-      const correct = kind === "correct";
-      const tones = correct
-        ? [
-            { frequency: 783.99, delay: 0, duration: 0.18 },
-            { frequency: 1174.66, delay: 0.12, duration: 0.34 }
-          ]
-        : [
-            { frequency: 329.63, delay: 0, duration: 0.18 },
-            { frequency: 246.94, delay: 0.13, duration: 0.34 }
-          ];
-      const master = feedbackContext.createGain();
-      master.gain.setValueAtTime(correct ? 0.48 : 0.42, start);
-      master.gain.exponentialRampToValueAtTime(0.0001, start + 0.52);
-      master.connect(feedbackContext.destination);
-
-      tones.forEach(({ frequency, delay, duration }) => {
-        const oscillator = feedbackContext.createOscillator();
-        const envelope = feedbackContext.createGain();
-        const toneStart = start + delay;
-        oscillator.type = correct ? "sine" : "triangle";
-        oscillator.frequency.setValueAtTime(frequency, toneStart);
-        envelope.gain.setValueAtTime(0.0001, toneStart);
-        envelope.gain.exponentialRampToValueAtTime(1, toneStart + 0.012);
-        envelope.gain.exponentialRampToValueAtTime(0.0001, toneStart + duration);
-        oscillator.connect(envelope);
-        envelope.connect(master);
-        oscillator.start(toneStart);
-        oscillator.stop(toneStart + duration + 0.02);
-      });
-    };
-
-    if (feedbackContext.state === "suspended") {
-      feedbackContext.resume().then(ring).catch(() => playFeedbackFallback(kind));
-    } else {
-      ring();
-    }
-  } catch {
-    playFeedbackFallback(kind);
-  }
+// Book jumps invalidate the feedback epoch and silence every active cue.
+function cancelFeedbackAudio(invalidate) {
+  feedbackBells.cancel(invalidate);
 }
 
 async function playClip(card, src, onFinished) {
@@ -477,6 +437,7 @@ const supportsNativeDialog = typeof elements.contentsDialog.showModal === "funct
 let contentsReturnFocus = null;
 let contentsBookPicked = false;
 let contentsKeydownHandler = null;
+let contentsDialogKeydownHandler = null;
 
 function populateContents() {
   elements.contentsList.textContent = "";
@@ -511,6 +472,30 @@ function openContents(event) {
   contentsReturnFocus = event?.currentTarget || document.activeElement;
   contentsBookPicked = false;
   populateContents();
+  // Explicit Tab trap is bound in both native and fallback modes; native
+  // showModal() still supplies background inertness, but Chromium does not
+  // itself keep Tab from leaving the dialog.
+  contentsDialogKeydownHandler = (keyEvent) => {
+    if (keyEvent.key === "Tab") {
+      const handled = trapTabKey(
+        keyEvent,
+        elements.contentsDialog,
+        document.activeElement
+      );
+      if (handled) keyEvent.preventDefault();
+      return;
+    }
+    if (!supportsNativeDialog && keyEvent.key === "Escape") {
+      keyEvent.preventDefault();
+      keyEvent.stopPropagation();
+      dismissContents();
+    }
+  };
+  elements.contentsDialog.addEventListener(
+    "keydown",
+    contentsDialogKeydownHandler
+  );
+
   if (supportsNativeDialog) {
     elements.contentsDialog.showModal();
   } else {
@@ -519,13 +504,22 @@ function openContents(event) {
     document.querySelectorAll(".page-shell, .finish-screen").forEach((node) => {
       node.setAttribute("inert", "");
     });
-    contentsKeydownHandler = (keyEvent) => handleFallbackKeydown(keyEvent);
-    document.addEventListener("keydown", contentsKeydownHandler);
   }
   currentBookButton()?.focus();
 }
 
 function closeContentsDialog() {
+  if (contentsDialogKeydownHandler) {
+    elements.contentsDialog.removeEventListener(
+      "keydown",
+      contentsDialogKeydownHandler
+    );
+    contentsDialogKeydownHandler = null;
+  }
+  if (contentsKeydownHandler) {
+    document.removeEventListener("keydown", contentsKeydownHandler);
+    contentsKeydownHandler = null;
+  }
   if (supportsNativeDialog) {
     if (elements.contentsDialog.open) elements.contentsDialog.close();
   } else {
@@ -534,10 +528,6 @@ function closeContentsDialog() {
     document.querySelectorAll(".page-shell, .finish-screen").forEach((node) => {
       node.removeAttribute("inert");
     });
-    if (contentsKeydownHandler) {
-      document.removeEventListener("keydown", contentsKeydownHandler);
-      contentsKeydownHandler = null;
-    }
   }
 }
 
@@ -557,6 +547,7 @@ function jumpToBook(book) {
   // Results preserved by reference; never invoke the test-reset path here.
   elements.finishScreen.hidden = true;
   stopAudio();
+  cancelFeedbackAudio(true);
   render();
 }
 
@@ -568,32 +559,10 @@ function selectBook(book) {
   elements.headerContentsButton.focus({ preventScroll: true });
 }
 
-function focusableElements() {
-  return [
-    ...elements.contentsDialog.querySelectorAll(
-      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-    )
-  ];
-}
-
 function handleFallbackKeydown(keyEvent) {
   if (keyEvent.key === "Escape") {
     keyEvent.preventDefault();
     dismissContents();
-    return;
-  }
-  if (keyEvent.key === "Tab") {
-    const focusables = focusableElements();
-    if (focusables.length === 0) return;
-    const first = focusables[0];
-    const last = focusables[focusables.length - 1];
-    if (keyEvent.shiftKey && document.activeElement === first) {
-      keyEvent.preventDefault();
-      last.focus();
-    } else if (!keyEvent.shiftKey && document.activeElement === last) {
-      keyEvent.preventDefault();
-      first.focus();
-    }
   }
 }
 
@@ -673,7 +642,7 @@ render();
 
 if ("serviceWorker" in navigator) {
   if (import.meta.env.PROD) {
-    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?release=v17"));
+    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?release=v18"));
   } else {
     navigator.serviceWorker
       .getRegistrations()
@@ -692,7 +661,14 @@ window.__IELTS_LISTENING_APP__ = {
   selectBook,
   dismissContents,
   jumpToBook,
-  feedbackState: () => ({ kind: state.lastFeedback, context: feedbackContext?.state ?? "fallback" }),
+  feedbackState: () => ({
+    kind: state.lastFeedback,
+    context: feedbackContext?.state ?? "fallback",
+    epoch: feedbackBells.epoch(),
+    ...feedbackBells.state()
+  }),
+  playFeedback,
+  cancelFeedbackAudio,
   visibilityState: () => ({
     allVisible:
       elements.audioStage.dataset.termsVisible === "true" &&

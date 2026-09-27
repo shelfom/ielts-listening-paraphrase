@@ -63,3 +63,63 @@ export function createPlayGuard() {
     }
   };
 }
+
+// --- Focus trap: shared by native <dialog> and the fallback layer. ---
+
+export const TAB_TABBABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/**
+ * Return the visible, enabled tabbable elements inside a container.
+ *
+ * @param {Element} container
+ * @returns {Element[]}
+ */
+export function getTabbable(container) {
+  if (!container || typeof container.querySelectorAll !== 'function') {
+    return [];
+  }
+  return [...container.querySelectorAll(TAB_TABBABLE_SELECTOR)].filter(
+    (element) => {
+      if (element.hasAttribute('disabled')) return false;
+      if (typeof element.getClientRects === 'function') {
+        return element.getClientRects().length > 0;
+      }
+      return true;
+    }
+  );
+}
+
+/**
+ * Handle Tab / Shift+Tab wrapping inside `container`. Used in both native and
+ * fallback modes so focus can never escape the dialog while it is open.
+ *
+ * @param {{ key: string, shiftKey?: boolean }} event
+ * @param {Element} container
+ * @param {Element} activeElement
+ * @returns {boolean} true when the event was handled (caller must preventDefault)
+ */
+export function trapTabKey(event, container, activeElement) {
+  if (!event || event.key !== 'Tab') return false;
+  const items = getTabbable(container);
+  if (items.length === 0) return true;
+  const first = items[0];
+  const last = items[items.length - 1];
+  const inside =
+    typeof container.contains === 'function'
+      ? container.contains(activeElement)
+      : false;
+
+  if (event.shiftKey) {
+    if (!inside || activeElement === first) {
+      last.focus();
+      return true;
+    }
+  } else {
+    if (!inside || activeElement === last) {
+      first.focus();
+      return true;
+    }
+  }
+  return false;
+}
