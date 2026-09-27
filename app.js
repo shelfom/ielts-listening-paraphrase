@@ -1,7 +1,15 @@
 import { COURSE, PEP_TALKS, audioPath, correctPosition } from "./data.js";
+import {
+  buildBookIndex,
+  firstTestIndex,
+  prepareBookJump,
+  createPlayGuard
+} from "./contents.js";
 
 const $ = (id) => document.getElementById(id);
 const optionLetters = ["A", "B", "C"];
+const books = buildBookIndex(COURSE);
+const playGuard = createPlayGuard();
 
 const elements = {
   testLabel: $("testLabel"),
@@ -22,6 +30,11 @@ const elements = {
   restartButton: $("restartButton"),
   nextButton: $("nextButton"),
   themeButton: $("themeButton"),
+  headerContentsButton: $("headerContentsButton"),
+  finishContentsButton: $("finishContentsButton"),
+  contentsDialog: $("contentsDialog"),
+  contentsClose: $("contentsClose"),
+  contentsList: $("contentsList"),
   finishScreen: $("finishScreen"),
   finishKicker: $("finishKicker"),
   finishCopy: $("finishCopy"),
@@ -124,6 +137,9 @@ function primeClip(src) {
 }
 
 function stopAudio() {
+  // Invalidate every callback/event attached before this stop so late
+  // promise resolutions or ended events from a previous drill/book are ignored.
+  playGuard.stop();
   state.activeAudio?.pause();
   if (state.activeAudio) {
     state.activeAudio.currentTime = 0;
@@ -235,6 +251,7 @@ function playFeedback(kind) {
 
 async function playClip(card, src, onFinished) {
   stopAudio();
+  const epoch = playGuard.current();
   const audio = primeClip(src);
   state.activeAudio = audio;
   state.activeCard = card;
@@ -244,6 +261,7 @@ async function playClip(card, src, onFinished) {
   setInstruction("Listening");
 
   audio.onended = () => {
+    if (!playGuard.isCurrent(epoch)) return;
     card.classList.remove("is-playing");
     state.activeAudio = null;
     state.activeCard = null;
@@ -251,6 +269,7 @@ async function playClip(card, src, onFinished) {
     updateChoiceState();
   };
   audio.onerror = () => {
+    if (!playGuard.isCurrent(epoch)) return;
     card.classList.remove("is-playing");
     state.activeAudio = null;
     state.activeCard = null;
@@ -260,6 +279,7 @@ async function playClip(card, src, onFinished) {
   try {
     await audio.play();
   } catch {
+    if (!playGuard.isCurrent(epoch)) return;
     card.classList.remove("is-playing");
     state.activeCard = null;
     setInstruction("Tap Listen again", "wrong");
@@ -451,6 +471,160 @@ function continueAfterFinish() {
   render();
 }
 
+// --- Contents dialog ---
+
+const supportsNativeDialog = typeof elements.contentsDialog.showModal === "function";
+let contentsReturnFocus = null;
+let contentsBookPicked = false;
+let contentsKeydownHandler = null;
+
+function populateContents() {
+  elements.contentsList.textContent = "";
+  books.forEach(({ book }) => {
+    const listItem = document.createElement("li");
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "contents-book";
+    button.dataset.book = String(book);
+    button.textContent = `Cambridge IELTS ${book}`;
+    const current = book === currentTest().book;
+    if (current) {
+      button.setAttribute("aria-current", "true");
+      button.setAttribute("aria-label", `Cambridge IELTS ${book} — current book`);
+    } else {
+      button.setAttribute("aria-label", `Cambridge IELTS ${book}`);
+    }
+    listItem.appendChild(button);
+    elements.contentsList.appendChild(listItem);
+  });
+}
+
+function currentBookButton() {
+  const currentBook = String(currentTest().book);
+  return (
+    elements.contentsList.querySelector(`[data-book="${currentBook}"]`) ||
+    elements.contentsList.querySelector(".contents-book")
+  );
+}
+
+function openContents(event) {
+  contentsReturnFocus = event?.currentTarget || document.activeElement;
+  contentsBookPicked = false;
+  populateContents();
+  if (supportsNativeDialog) {
+    elements.contentsDialog.showModal();
+  } else {
+    elements.contentsDialog.setAttribute("open", "");
+    elements.contentsDialog.classList.add("is-fallback");
+    document.querySelectorAll(".page-shell, .finish-screen").forEach((node) => {
+      node.setAttribute("inert", "");
+    });
+    contentsKeydownHandler = (keyEvent) => handleFallbackKeydown(keyEvent);
+    document.addEventListener("keydown", contentsKeydownHandler);
+  }
+  currentBookButton()?.focus();
+}
+
+function closeContentsDialog() {
+  if (supportsNativeDialog) {
+    if (elements.contentsDialog.open) elements.contentsDialog.close();
+  } else {
+    elements.contentsDialog.classList.remove("is-fallback");
+    elements.contentsDialog.removeAttribute("open");
+    document.querySelectorAll(".page-shell, .finish-screen").forEach((node) => {
+      node.removeAttribute("inert");
+    });
+    if (contentsKeydownHandler) {
+      document.removeEventListener("keydown", contentsKeydownHandler);
+      contentsKeydownHandler = null;
+    }
+  }
+}
+
+function dismissContents() {
+  contentsBookPicked = false;
+  closeContentsDialog();
+  // Dismissal never changes the exercise; focus returns to the opener.
+  contentsReturnFocus?.focus?.({ preventScroll: true });
+}
+
+function jumpToBook(book) {
+  const targetTestIndex = firstTestIndex(COURSE, book);
+  if (targetTestIndex < 0) return;
+  const jump = prepareBookJump(state, targetTestIndex);
+  state.testIndex = jump.testIndex;
+  state.drillIndex = jump.drillIndex;
+  // Results preserved by reference; never invoke the test-reset path here.
+  elements.finishScreen.hidden = true;
+  stopAudio();
+  render();
+}
+
+function selectBook(book) {
+  contentsBookPicked = true;
+  jumpToBook(book);
+  closeContentsDialog();
+  // Move focus to a visible exercise control, not the (possibly hidden) opener.
+  elements.headerContentsButton.focus({ preventScroll: true });
+}
+
+function focusableElements() {
+  return [
+    ...elements.contentsDialog.querySelectorAll(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )
+  ];
+}
+
+function handleFallbackKeydown(keyEvent) {
+  if (keyEvent.key === "Escape") {
+    keyEvent.preventDefault();
+    dismissContents();
+    return;
+  }
+  if (keyEvent.key === "Tab") {
+    const focusables = focusableElements();
+    if (focusables.length === 0) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (keyEvent.shiftKey && document.activeElement === first) {
+      keyEvent.preventDefault();
+      last.focus();
+    } else if (!keyEvent.shiftKey && document.activeElement === last) {
+      keyEvent.preventDefault();
+      first.focus();
+    }
+  }
+}
+
+if (supportsNativeDialog) {
+  // Escape / backdrop / close button all arrive here; dismissal changes nothing.
+  elements.contentsDialog.addEventListener("close", () => {
+    if (!contentsBookPicked) {
+      contentsReturnFocus?.focus?.({ preventScroll: true });
+    }
+  });
+  elements.contentsDialog.addEventListener("cancel", (event) => {
+    // Keep Escape aligned with close(): no selection is made.
+    event.preventDefault();
+    contentsBookPicked = false;
+    elements.contentsDialog.close();
+  });
+  // Actual backdrop dismissal (clicks directly on the dialog, not its content).
+  elements.contentsDialog.addEventListener("click", (event) => {
+    if (event.target === elements.contentsDialog) dismissContents();
+  });
+}
+
+elements.contentsClose.addEventListener("click", dismissContents);
+elements.contentsList.addEventListener("click", (event) => {
+  const button = event.target.closest(".contents-book");
+  if (!button) return;
+  selectBook(Number(button.dataset.book));
+});
+elements.headerContentsButton.addEventListener("click", openContents);
+elements.finishContentsButton.addEventListener("click", openContents);
+
 function setTheme(theme) {
   document.documentElement.dataset.theme = theme;
   localStorage.setItem("ielts-listening-theme", theme);
@@ -486,6 +660,10 @@ elements.themeButton.addEventListener("click", () => {
 });
 
 document.addEventListener("keydown", (event) => {
+  const contentsOpen = elements.contentsDialog.open
+    ? elements.contentsDialog.open !== false
+    : elements.contentsDialog.hasAttribute("open");
+  if (contentsOpen) return;
   if (event.key === "ArrowLeft" && event.altKey) previousDrill();
   if (event.key === "ArrowRight" && event.altKey) nextDrill();
 });
@@ -495,7 +673,7 @@ render();
 
 if ("serviceWorker" in navigator) {
   if (import.meta.env.PROD) {
-    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?release=v16"));
+    window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?release=v17"));
   } else {
     navigator.serviceWorker
       .getRegistrations()
@@ -506,14 +684,21 @@ if ("serviceWorker" in navigator) {
 window.__IELTS_LISTENING_APP__ = {
   COURSE,
   state,
+  books,
   currentOptions,
   currentTest,
   currentDrill,
+  openContents,
+  selectBook,
+  dismissContents,
+  jumpToBook,
   feedbackState: () => ({ kind: state.lastFeedback, context: feedbackContext?.state ?? "fallback" }),
   visibilityState: () => ({
     allVisible:
       elements.audioStage.dataset.termsVisible === "true" &&
       !elements.questionText.hidden &&
       elements.options.every(({ text }) => !text.hidden)
-  })
+  }),
+  contentsOpen: () =>
+    supportsNativeDialog ? elements.contentsDialog.open : elements.contentsDialog.hasAttribute("open")
 };

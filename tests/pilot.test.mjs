@@ -2,6 +2,12 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { ALL_DRILLS, ALL_TESTS, COURSE, PEP_TALKS, audioKey, correctPosition } from "../data.js";
+import {
+  buildBookIndex,
+  firstTestIndex,
+  prepareBookJump,
+  createPlayGuard
+} from "../contents.js";
 
 test("course covers Books 11–20 from required through usually most effective", () => {
   assert.equal(COURSE.tests.length, 40);
@@ -139,8 +145,8 @@ test("all four English phrases stay hidden until choice and Choose remains activ
   assert.doesNotMatch(app, /choose\.disabled = true/);
   assert.doesNotMatch(app, /revealAnswer\(correctPosition\(state\.drillIndex\), false\)/);
   assert.match(app, /elements\.questionListen\.setAttribute\("aria-label", "Listen to tested word"\)/);
-  assert.match(worker, /const cacheName = "ielts-listening-books-11-20-v16";/);
-  assert.match(app, /navigator\.serviceWorker\.register\("\/sw\.js\?release=v16"\)/);
+  assert.match(worker, /const cacheName = "ielts-listening-books-11-20-v17";/);
+  assert.match(app, /navigator\.serviceWorker\.register\("\/sw\.js\?release=v17"\)/);
 });
 
 test("correct and wrong feedback use distinct immediate bell cues", () => {
@@ -214,3 +220,165 @@ test("phone practice shell is fixed and IELTS-led", () => {
   assert.match(styles, /\.practice \{[\s\S]*grid-template-rows:[\s\S]*minmax\(0, 1fr\)/);
   assert.match(styles, /\.audio-stage \{[\s\S]*grid-template-rows: repeat\(2, minmax\(0, 1fr\)\)/);
 });
+
+// --- Contents navigation ---
+
+test("Contents derives all books dynamically from test metadata with no hardcoded list", () => {
+  const index = buildBookIndex(COURSE);
+  assert.deepEqual(
+    index.map((entry) => entry.book),
+    [11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+  );
+  // First occurrence indexes follow the 4-tests-per-book structure.
+  assert.deepEqual(
+    index.map((entry) => entry.firstTestIndex),
+    [0, 4, 8, 12, 16, 20, 24, 28, 32, 36]
+  );
+
+  // Future books appear automatically: build from an artificial course.
+  const futureCourse = {
+    tests: [{ book: 11 }, { book: 11 }, { book: 21 }, { book: 21 }]
+  };
+  assert.deepEqual(buildBookIndex(futureCourse), [
+    { book: 11, firstTestIndex: 0 },
+    { book: 21, firstTestIndex: 2 }
+  ]);
+});
+
+test("every book resolves to its first available test, including Book 12 starting at Test 5", () => {
+  const index = buildBookIndex(COURSE);
+  index.forEach(({ book, firstTestIndex: expected }) => {
+    assert.equal(firstTestIndex(COURSE, book), expected);
+    const resolvedTest = COURSE.tests[firstTestIndex(COURSE, book)];
+    assert.equal(resolvedTest.book, book);
+  });
+  // Book 12 must never assume Test 1: its first test is Cambridge 12 Test 5 (index 4).
+  assert.equal(firstTestIndex(COURSE, 12), 4);
+  assert.equal(COURSE.tests[4].book, 12);
+  assert.equal(COURSE.tests[4].test, 5);
+  // Unknown book yields -1 rather than a guessed index.
+  assert.equal(firstTestIndex(COURSE, 99), -1);
+});
+
+test("book jump targets the first drill and preserves results exactly by reference", () => {
+  const results = { "11-1-1-01": { completed: true, firstTryCorrect: true } };
+  const baseState = { testIndex: 4, drillIndex: 27, results };
+
+  // Forward book (11 -> 20)
+  let jump = prepareBookJump(baseState, firstTestIndex(COURSE, 20));
+  assert.deepEqual(jump, { testIndex: 36, drillIndex: 0, results });
+  assert.equal(jump.results, results);
+
+  // Backward book (20 -> 11)
+  jump = prepareBookJump(baseState, firstTestIndex(COURSE, 11));
+  assert.deepEqual(jump, { testIndex: 0, drillIndex: 0, results });
+  assert.equal(jump.results, results);
+
+  // Same book still returns to its first drill, results untouched
+  jump = prepareBookJump(baseState, firstTestIndex(COURSE, 12));
+  assert.deepEqual(jump, { testIndex: 4, drillIndex: 0, results });
+  assert.equal(jump.results, results);
+});
+
+test("play guard stops audio and invalidates stale asynchronous callbacks", () => {
+  const guard = createPlayGuard();
+  const first = guard.current();
+  assert.ok(guard.isCurrent(first));
+  const afterStop = guard.stop();
+  assert.ok(afterStop > first);
+  // Captured epoch before stop is now stale.
+  assert.equal(guard.isCurrent(first), false);
+  assert.ok(guard.isCurrent(afterStop));
+  // Each stop invalidates the previous generation again.
+  const later = guard.stop();
+  assert.equal(guard.isCurrent(afterStop), false);
+  assert.ok(guard.isCurrent(later));
+});
+
+test("Contents is wired into the header and the completion screen", () => {
+  const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
+  assert.match(html, /id="headerContentsButton"[^>]*>\s*Contents/);
+  assert.match(html, /id="finishContentsButton"[^>]*>\s*Contents/);
+  assert.match(html, /<dialog[^>]*id="contentsDialog"[^>]*aria-labelledby="contentsTitle"/);
+  assert.match(html, /id="contentsTitle"[^>]*>Contents/);
+  assert.match(html, /id="contentsList"/);
+  assert.match(html, /id="contentsClose"[^>]*aria-label="Close Contents"/);
+  assert.match(app, /elements\.headerContentsButton\.addEventListener\("click", openContents\)/);
+  assert.match(app, /elements\.finishContentsButton\.addEventListener\("click", openContents\)/);
+});
+
+test("Contents dialog highlights the current book visually and accessibly", () => {
+  const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
+  const styles = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
+  assert.match(app, /button\.setAttribute\("aria-current", "true"\)/);
+  assert.match(app, /current book/);
+  assert.match(styles, /\.contents-book\[aria-current="true"\]/);
+  assert.match(styles, /content: "Current"/);
+});
+
+test("selecting a book closes the dialog, hides completion, and jumps to first drill", () => {
+  const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
+  assert.match(
+    app,
+    /function jumpToBook\(book\) \{[\s\S]*const targetTestIndex = firstTestIndex\(COURSE, book\);[\s\S]*state\.testIndex = jump\.testIndex;[\s\S]*state\.drillIndex = jump\.drillIndex;[\s\S]*Results preserved by reference/
+  );
+  assert.match(app, /elements\.finishScreen\.hidden = true;[\s\S]*stopAudio\(\);[\s\S]*render\(\);/);
+  assert.match(
+    app,
+    /function selectBook\(book\) \{[\s\S]*jumpToBook\(book\);[\s\S]*closeContentsDialog\(\);[\s\S]*elements\.headerContentsButton\.focus/
+  );
+  // Storage format and results key are preserved.
+  assert.match(app, /const storageKey = "ielts-listening-paraphrase-v3";/);
+  // The book path must never delete results.
+  const jumpBody = app.match(/function jumpToBook\(book\) \{\n([\s\S]*?)\n\}\n/);
+  assert.ok(jumpBody, "jumpToBook must exist");
+  assert.doesNotMatch(jumpBody[1], /restartCurrentTest/);
+  const selectBody = app.match(/function selectBook\(book\) \{\n([\s\S]*?)\n\}\n/);
+  assert.ok(selectBody, "selectBook must exist");
+  assert.doesNotMatch(selectBody[1], /restartCurrentTest/);
+});
+
+test("dismissal via Escape, close button, or backdrop leaves the exercise unchanged", () => {
+  const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
+  // Native dialog: cancel (Escape) prevented and routed through close without selection.
+  assert.match(app, /elements\.contentsDialog\.addEventListener\("cancel", \(event\) =>/);
+  assert.match(app, /contentsBookPicked = false;\s*elements\.contentsDialog\.close\(\);/);
+  // Actual backdrop dismissal.
+  assert.match(app, /if \(event\.target === elements\.contentsDialog\) dismissContents\(\);/);
+  // Close button.
+  assert.match(app, /elements\.contentsClose\.addEventListener\("click", dismissContents\)/);
+  // Dismiss only returns focus; it does not touch test/drill/results.
+  assert.match(
+    app,
+    /function dismissContents\(\) \{[\s\S]*contentsBookPicked = false;[\s\S]*closeContentsDialog\(\);[\s\S]*contentsReturnFocus\?\.focus/
+  );
+  const dismissBody = app.match(/function dismissContents\(\) \{\n([\s\S]*?)\n\}\n/);
+  assert.ok(dismissBody, "dismissContents must exist");
+  assert.doesNotMatch(dismissBody[1], /render\(\)/);
+});
+
+test("dialog provides focus trap, initial focus, background inertness, and focus return", () => {
+  const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
+  // Initial focus lands on the current book.
+  assert.match(app, /currentBookButton\(\)\?\.focus\(\);/);
+  // Focus returns to opener on close (native close event for dismissal).
+  assert.match(app, /elements\.contentsDialog\.addEventListener\("close", \(\) =>/);
+  assert.match(app, /contentsReturnFocus\?\.focus\?\.\(\{ preventScroll: true \}\)/);
+  // Fallback path: background inertness and Tab confinement.
+  assert.match(app, /setAttribute\("inert", ""\)/);
+  assert.match(app, /removeAttribute\("inert"\)/);
+  assert.match(app, /function handleFallbackKeydown\(keyEvent\)/);
+  assert.match(app, /if \(keyEvent\.key === "Tab"\)/);
+  assert.match(app, /keyEvent\.preventDefault\(\);\s*last\.focus\(\)/);
+  assert.match(app, /keyEvent\.preventDefault\(\);\s*first\.focus\(\)/);
+});
+
+test("Contents modal stacks above completion and keeps keyboard shortcuts inactive while open", () => {
+  const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
+  const styles = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
+  assert.match(styles, /\.contents-dialog/);
+  assert.match(styles, /\.contents-list \{[\s\S]*overflow-y: auto;/);
+  assert.match(app, /const contentsOpen =[\s\S]*if \(contentsOpen\) return;/);
+});
+

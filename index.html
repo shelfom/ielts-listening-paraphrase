@@ -39,10 +39,15 @@
           <span class="brand-ielts">IELTS</span>
           <span class="brand-name">Listening Paraphrase</span>
         </h1>
-        <button class="theme-button" id="themeButton" type="button" aria-label="Switch to dark theme">
-          <span class="theme-icon" aria-hidden="true">☼</span>
-          <span class="theme-label visually-hidden">Dark</span>
-        </button>
+        <div class="header-actions">
+          <button class="contents-button" id="headerContentsButton" type="button">
+            Contents
+          </button>
+          <button class="theme-button" id="themeButton" type="button" aria-label="Switch to dark theme">
+            <span class="theme-icon" aria-hidden="true">☼</span>
+            <span class="theme-label visually-hidden">Dark</span>
+          </button>
+        </div>
       </header>
 
       <main class="practice" id="practice">
@@ -176,11 +181,24 @@
         <button class="primary-button" id="continueTestButton" type="button">
           Continue · Cambridge 11 Test 2
         </button>
+        <button class="secondary-button" id="finishContentsButton" type="button">
+          Contents
+        </button>
         <button class="secondary-button" id="practiseAgainButton" type="button">
           Practise this test again
         </button>
       </div>
     </section>
+
+    <dialog class="contents-dialog" id="contentsDialog" aria-labelledby="contentsTitle">
+      <div class="contents-panel">
+        <h2 class="contents-title" id="contentsTitle">Contents</h2>
+        <button class="contents-close" id="contentsClose" type="button" aria-label="Close Contents">
+          <span aria-hidden="true">×</span>
+        </button>
+        <ul class="contents-list" id="contentsList"></ul>
+      </div>
+    </dialog>
 
     <script type="module" src="/app.js"></script>
   </body>
