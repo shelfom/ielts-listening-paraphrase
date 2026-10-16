@@ -17,6 +17,12 @@ Hear the words IELTS actually tests, then catch their paraphrases by ear.
 - Contents menu to jump to any book and test
 - Light and dark themes, keyboard shortcuts, fits a phone screen without scrolling
 
+## How it works · 图解
+
+Why this drill exists and how to use it, in five cards (Chinese).
+
+<a href="docs/cards/01.jpg"><img src="docs/cards/thumb-01.jpg" width="150" alt="雅思听力同义替换 1/5"></a> <a href="docs/cards/02.jpg"><img src="docs/cards/thumb-02.jpg" width="150" alt="雅思听力同义替换 2/5"></a> <a href="docs/cards/03.jpg"><img src="docs/cards/thumb-03.jpg" width="150" alt="雅思听力同义替换 3/5"></a> <a href="docs/cards/04.jpg"><img src="docs/cards/thumb-04.jpg" width="150" alt="雅思听力同义替换 4/5"></a> <a href="docs/cards/05.jpg"><img src="docs/cards/thumb-05.jpg" width="150" alt="雅思听力同义替换 5/5"></a>
+
 ## Run it locally
 
 ```bash
