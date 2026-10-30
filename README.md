@@ -6,9 +6,9 @@ Hear the words IELTS actually tests, then catch their paraphrases by ear.
 
 **Free · no sign-up · works on phones.** Part of [Free English Learning Tools](https://github.com/shelfom/free-english-learning-tools), 11 free websites for IELTS, Cambridge English and academic vocabulary.
 
-**[▶ Open the site](https://ielts-listening-para.coze.site/)** (fastest in mainland China) · **[🌍 Global mirror](https://shelfom.github.io/ielts-listening-paraphrase/)** (GitHub Pages)
+**[▶ Open the site](https://tools.turtlebayedu.com/ielts-listening-paraphrase/)** (fastest in mainland China) · **[🌍 Global mirror](https://shelfom.github.io/ielts-listening-paraphrase/)** (GitHub Pages)
 
-[![IELTS Listening Paraphrase screenshot](docs/screenshot.jpg)](https://ielts-listening-para.coze.site/)
+[![IELTS Listening Paraphrase screenshot](docs/screenshot.jpg)](https://tools.turtlebayedu.com/ielts-listening-paraphrase/)
 
 ## What's inside
 
@@ -34,16 +34,16 @@ pnpm dev
 
 | Site | What you practise | Open |
 |---|---|---|
-| [IELTS Reading Paraphrase](https://github.com/shelfom/ielts-reading-paraphrase) | Match the words in the question to the words in the passage — the core IELTS Reading skill. | [Site](https://ielts-reading-para.coze.site/) · [Mirror](https://shelfom.github.io/ielts-reading-paraphrase/) |
-| [IELTS Sentence Repair](https://github.com/shelfom/ielts-sentence-repair) | Fix the grammar and word mistakes that cost IELTS writers their band score. | [Site](https://ielts-repair.coze.site/) · [Mirror](https://shelfom.github.io/ielts-sentence-repair/) |
-| [IELTS Writing Translation · Write It Back](https://github.com/shelfom/ielts-writing-translation) | Translate model essays back from Chinese into English, sentence by sentence, and compare. | [Site](https://ielts-writeback.coze.site/) · [Mirror](https://shelfom.github.io/ielts-writing-translation/) |
-| [IELTS Writing · Band 6 to Band 8](https://github.com/shelfom/ielts-writing-band-6-to-8) | Rewrite a Band 6 sentence at Band 8, then compare it with a Band 8 version. | [Site](https://ielts6-8.coze.site/) · [Mirror](https://shelfom.github.io/ielts-writing-band-6-to-8/) |
-| [IELTS Speaking Mock Test](https://github.com/shelfom/ielts-speaking-mock) | A full Part 1–3 speaking test with a British AI examiner and a four-criterion band report. | [Site](https://speaking-mock.43-129-168-253.sslip.io/) |
-| [IELTS Writing West](https://github.com/shelfom/ielts-writing-west) | Four AI coaches from *Journey to the West* diagnose your essay and guide your rewrite, one criterion at a time. | [Site](https://writing-west.43-129-168-253.sslip.io/) |
-| [AWL 570 Flashcards](https://github.com/shelfom/awl-570-flashcards) | All 570 headwords of the Academic Word List — the vocabulary of IELTS, TOEFL and university reading. | [Site](https://awl-flash.coze.site/) · [Mirror](https://shelfom.github.io/awl-570-flashcards/) |
-| [Cambridge KET Flashcards](https://github.com/shelfom/cambridge-ket-flashcards) | Every word on the official A2 Key vocabulary list, each with a storybook picture and a British voice. | [Site](https://ket-flash.coze.site/) · [Mirror](https://shelfom.github.io/cambridge-ket-flashcards/) |
-| [Cambridge PET Flashcards](https://github.com/shelfom/cambridge-pet-flashcards) | The B1 Preliminary words that KET doesn't cover, each with a picture, a voice and a simple example. | [Site](https://pet-flash.coze.site/) · [Mirror](https://shelfom.github.io/cambridge-pet-flashcards/) |
-| [Cambridge FCE Flashcards](https://github.com/shelfom/cambridge-fce-flashcards) | The B2 First words beyond KET and PET, unit by unit, with pictures and a British voice. | [Site](https://fce-flash.coze.site/) · [Mirror](https://shelfom.github.io/cambridge-fce-flashcards/) |
+| [IELTS Reading Paraphrase](https://github.com/shelfom/ielts-reading-paraphrase) | Match the words in the question to the words in the passage — the core IELTS Reading skill. | [Site](https://tools.turtlebayedu.com/ielts-reading-paraphrase/) · [Mirror](https://shelfom.github.io/ielts-reading-paraphrase/) |
+| [IELTS Sentence Repair](https://github.com/shelfom/ielts-sentence-repair) | Fix the grammar and word mistakes that cost IELTS writers their band score. | [Site](https://tools.turtlebayedu.com/ielts-sentence-repair/) · [Mirror](https://shelfom.github.io/ielts-sentence-repair/) |
+| [IELTS Writing Translation · Write It Back](https://github.com/shelfom/ielts-writing-translation) | Translate model essays back from Chinese into English, sentence by sentence, and compare. | [Site](https://tools.turtlebayedu.com/ielts-writing-translation/) · [Mirror](https://shelfom.github.io/ielts-writing-translation/) |
+| [IELTS Writing · Band 6 to Band 8](https://github.com/shelfom/ielts-writing-band-6-to-8) | Rewrite a Band 6 sentence at Band 8, then compare it with a Band 8 version. | [Site](https://tools.turtlebayedu.com/ielts-writing-band-6-to-8/) · [Mirror](https://shelfom.github.io/ielts-writing-band-6-to-8/) |
+| [IELTS Speaking Mock Test](https://github.com/shelfom/ielts-speaking-mock) | A full Part 1–3 speaking test with a British AI examiner and a four-criterion band report. | [Site](https://speaking.turtlebayedu.com/) |
+| [IELTS Writing West](https://github.com/shelfom/ielts-writing-west) | Four AI coaches from *Journey to the West* diagnose your essay and guide your rewrite, one criterion at a time. | [Site](https://writing.turtlebayedu.com/) |
+| [AWL 570 Flashcards](https://github.com/shelfom/awl-570-flashcards) | All 570 headwords of the Academic Word List — the vocabulary of IELTS, TOEFL and university reading. | [Site](https://tools.turtlebayedu.com/awl-570-flashcards/) · [Mirror](https://shelfom.github.io/awl-570-flashcards/) |
+| [Cambridge KET Flashcards](https://github.com/shelfom/cambridge-ket-flashcards) | Every word on the official A2 Key vocabulary list, each with a storybook picture and a British voice. | [Site](https://tools.turtlebayedu.com/cambridge-ket-flashcards/) · [Mirror](https://shelfom.github.io/cambridge-ket-flashcards/) |
+| [Cambridge PET Flashcards](https://github.com/shelfom/cambridge-pet-flashcards) | The B1 Preliminary words that KET doesn't cover, each with a picture, a voice and a simple example. | [Site](https://tools.turtlebayedu.com/cambridge-pet-flashcards/) · [Mirror](https://shelfom.github.io/cambridge-pet-flashcards/) |
+| [Cambridge FCE Flashcards](https://github.com/shelfom/cambridge-fce-flashcards) | The B2 First words beyond KET and PET, unit by unit, with pictures and a British voice. | [Site](https://tools.turtlebayedu.com/cambridge-fce-flashcards/) · [Mirror](https://shelfom.github.io/cambridge-fce-flashcards/) |
 
 Browse them all on one page: **https://shelfom.github.io/free-english-learning-tools/**
 
